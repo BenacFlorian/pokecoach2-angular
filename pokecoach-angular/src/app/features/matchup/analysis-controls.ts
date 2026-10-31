@@ -65,7 +65,7 @@ export class AnalysisControls {
     if (run?.status === 'paused') {
       return 'Étape terminée pour l’instant. « Continuer » enchaînera les phases suivantes quand elles seront disponibles.';
     }
-    return 'Analyse A puis B enchaînées automatiquement ; pause seulement après la dernière phase implémentée.';
+    return 'Analyse A→B→C enchaînées quand les phases sont disponibles ; pause après la dernière phase implémentée ou la cible choisie.';
   });
 
   launch(): void {

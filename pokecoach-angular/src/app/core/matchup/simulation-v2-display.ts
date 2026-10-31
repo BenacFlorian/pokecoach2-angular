@@ -151,12 +151,26 @@ function mapSlotFrequencyList(
   return out;
 }
 
+function orderFourLeadsFirst(
+  four: LeadRecommendation['ourFourSlots'],
+  lead: LeadRecommendation['ourLeadSlots'],
+): LeadRecommendation['ourFourSlots'] {
+  const [leadA, leadB] = lead;
+  const leadSet = new Set<PokemonSlot>([leadA, leadB]);
+  const backs = four.filter((s): s is PokemonSlot => !leadSet.has(s)).sort((a, b) => a - b);
+  return [leadA, leadB, backs[0], backs[1]];
+}
+
 function mapLeadRecommendation(
   section: import('../models/simulation-result.model').LeadPickSectionV2,
 ): LeadRecommendation {
   const sel = section.selection;
+  const ourFourSlots = orderFourLeadsFirst(
+    sel.ourFourSlots as LeadRecommendation['ourFourSlots'],
+    sel.ourLeadSlots as LeadRecommendation['ourLeadSlots'],
+  );
   return {
-    ourFourSlots: sel.ourFourSlots as LeadRecommendation['ourFourSlots'],
+    ourFourSlots,
     ourLeadSlots: sel.ourLeadSlots as LeadRecommendation['ourLeadSlots'],
     justification: section.limitations.join(' ') || 'Sélection calculée par simulation.',
     selectionResults: mapComparisons(section.comparisons),
@@ -184,10 +198,12 @@ function mapComparisons(raw: unknown[]): readonly SelectionResult[] {
     if (!Array.isArray(four) || four.length !== 4 || !Array.isArray(lead) || lead.length !== 2) {
       continue;
     }
+    const fourTyped = four as unknown as SelectionResult['ourFourSlots'];
+    const leadTyped = lead as unknown as SelectionResult['ourLeadSlots'];
     out.push({
       opponentLeadId: obj['opponentLeadId'],
-      ourFourSlots: four as unknown as SelectionResult['ourFourSlots'],
-      ourLeadSlots: lead as unknown as SelectionResult['ourLeadSlots'],
+      ourFourSlots: orderFourLeadsFirst(fourTyped, leadTyped),
+      ourLeadSlots: leadTyped,
       wins,
       losses,
       draws,

@@ -12,7 +12,7 @@
     <div class="tw:flex tw:flex-col tw:gap-3">
       <h3 class="tw:m-0" i18n="@@leadPick.ourFour">Nos quatre</h3>
       <div class="tw:flex tw:flex-wrap tw:gap-4 tw:p-2">
-        @for (slot of rec.ourFourSlots; track slot) {
+        @for (slot of displayFourSlots(rec); track slot) {
           <div
             class="tw:p-3 tw:rounded-box"
             [class.tw:ring-2]="rec.ourLeadSlots.includes(slot)"
@@ -38,11 +38,17 @@
     @for (study of rec.studiedLeads; track study.opponentLeadId) {
       <article class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
         <h4 class="tw:m-0">{{ leadLabel(study.opponentLeadId) }}</h4>
-        <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
-          @for (action of study.primaryActions; track $index) {
-            <li>{{ formatAction(action) }}</li>
-          }
-        </ul>
+        @if (study.primaryActions.length) {
+          <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+            @for (action of study.primaryActions; track $index) {
+              <li>{{ formatAction(action) }}</li>
+            }
+          </ul>
+        } @else {
+          <p class="tw:text-sm tw:text-base-content/70 tw:mt-2" i18n="@@leadPick.insufficient">
+            Données insuffisantes
+          </p>
+        }
         @if (study.alternatives.length) {
           <p class="tw:text-sm tw:mt-3" i18n="@@leadPick.alternatives">Alternatives</p>
           <ul class="tw:list-disc tw:pl-4 tw:text-sm">

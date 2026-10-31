@@ -5,7 +5,7 @@ import type {
   OpponentLeadStats,
   SelectionResult,
 } from '../../core/models/matchup.model';
-import type { Team } from '../../core/models/team.model';
+import type { PokemonSlot, Team } from '../../core/models/team.model';
 import {
   formatPercent,
   opponentLeadLabelById,
@@ -25,6 +25,15 @@ export class LeadPick {
   readonly selections = input<readonly SelectionResult[] | null>(null);
   readonly studiedLeadIds = input.required<readonly string[]>();
   readonly provenanceNote = input<string | null>(null);
+
+  /** Lead pair first, then back pair (stable slot order within each group). */
+  displayFourSlots(rec: LeadRecommendation): readonly PokemonSlot[] {
+    const four = rec.ourFourSlots;
+    const [leadA, leadB] = rec.ourLeadSlots;
+    const leadSet = new Set<PokemonSlot>([leadA, leadB]);
+    const backs = four.filter((s) => !leadSet.has(s)).sort((a, b) => a - b);
+    return [leadA, leadB, ...backs];
+  }
 
   winRate(result: SelectionResult): string | null {
     if (result.sampleSize === 0) {
