@@ -10,7 +10,7 @@ import { RouterLink } from '@angular/router';
 import { CoachStore } from '../../core/data/coach-store';
 import {
   activeRunStatusMessage,
-  reportProvenanceLabel,
+  runProvenanceBadge,
   shouldPollRun,
   type RunResult,
   type SelectedRunView,
@@ -337,12 +337,12 @@ export class Matchup {
   provenanceLabel(): string | null {
     const view = this.selectedRunView();
     if (view?.kind === 'mock') {
-      return reportProvenanceLabel(view.result.summary.source);
+      return runProvenanceBadge(view.result.summary.source, null);
     }
     if (view?.kind === 'simulation') {
-      return reportProvenanceLabel(view.view.summary.source);
+      return runProvenanceBadge(view.view.summary.source, view.view.provenance);
     }
-    return reportProvenanceLabel(this.runResult()?.summary.source ?? null);
+    return runProvenanceBadge(this.runResult()?.summary.source ?? null, null);
   }
 
   refresh(): void {

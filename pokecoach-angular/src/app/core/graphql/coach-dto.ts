@@ -32,6 +32,7 @@ export interface GqlRunNode {
   progress?: unknown;
   targetPhase?: string | null;
   executionMetadata?: unknown;
+  provenance?: unknown;
 }
 
 export interface GqlRunDetailNode extends GqlRunNode {

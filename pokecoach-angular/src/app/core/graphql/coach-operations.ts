@@ -26,6 +26,7 @@ export const RUN_PROGRESS_FIELDS = `
   resultRevision
   progress
   executionMetadata
+  provenance
 `;
 
 export const RUN_DETAIL_FIELDS = `

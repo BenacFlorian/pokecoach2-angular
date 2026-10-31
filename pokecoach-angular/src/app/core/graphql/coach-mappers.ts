@@ -59,6 +59,7 @@ export interface SimulationRunView {
   ourTeamSnapshot: Team;
   opponentTeamSnapshot: Team;
   tabDisplay: SimulationTabDisplay;
+  provenance: unknown;
 }
 
 export type SelectedRunView =
@@ -481,6 +482,31 @@ export function reportProvenanceLabel(source: string | null): string | null {
   return null;
 }
 
+export function runProvenanceBadge(
+  source: string | null,
+  provenance: unknown,
+): string | null {
+  const mock = reportProvenanceLabel(source);
+  if (mock && source === 'mock') {
+    return mock;
+  }
+  if (typeof provenance !== 'object' || provenance === null || Array.isArray(provenance)) {
+    return source === 'simulation' ? 'Données de test — moteur simulé' : mock;
+  }
+  const mode = (provenance as { engineMode?: string }).engineMode;
+  if (mode === 'stub') {
+    return 'Données de test — moteur simulé';
+  }
+  if (mode === 'vgc_bench') {
+    const identity = (provenance as { engineIdentity?: { kind?: string } }).engineIdentity;
+    if (identity?.kind === 'fixture-bridge') {
+      return 'Bridge fixture (CI — pas BC production)';
+    }
+    return 'Simulation BC — checkpoint VGC-Bench';
+  }
+  return reportProvenanceLabel(source);
+}
+
 export function mapRunProgress(raw: unknown): RunProgress | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     return null;
@@ -565,6 +591,7 @@ export function mapSimulationRunView(
         ourTeamSnapshot,
         opponentTeamSnapshot,
         tabDisplay: mapSimulationV2ToTabDisplay(validated.value),
+        provenance: node.provenance ?? {},
       },
     };
   }
