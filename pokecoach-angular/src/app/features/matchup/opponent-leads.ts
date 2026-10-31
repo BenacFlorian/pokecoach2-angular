@@ -64,6 +64,14 @@ export class OpponentLeads {
     return [...lead.backPairs].sort((a, b) => b.count - a.count);
   });
 
+  readonly sortedBackMarginals = computed(() => {
+    const lead = this.activeLead();
+    if (!lead) {
+      return [];
+    }
+    return [...lead.backSlotMarginals].sort((a, b) => b.count - a.count);
+  });
+
   selectLead(id: string): void {
     this.selectedLeadIdChange.emit(id);
   }

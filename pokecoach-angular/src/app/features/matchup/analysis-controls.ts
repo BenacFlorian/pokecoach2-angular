@@ -63,9 +63,9 @@ export class AnalysisControls {
       return 'Analyse en cours — les résultats partiels apparaîtront ici.';
     }
     if (run?.status === 'paused') {
-      return 'Étape terminée pour l’instant. « Continuer » reprendra quand les phases suivantes seront branchées.';
+      return 'Étape terminée pour l’instant. « Continuer » enchaînera les phases suivantes quand elles seront disponibles.';
     }
-    return 'Analyse complète prévue (A → synthèse) ; seules les phases déjà codées s’exécutent pour l’instant.';
+    return 'Analyse A puis B enchaînées automatiquement ; pause seulement après la dernière phase implémentée.';
   });
 
   launch(): void {

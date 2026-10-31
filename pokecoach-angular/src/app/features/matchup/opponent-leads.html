@@ -50,20 +50,44 @@
 
       <section class="tw:flex tw:flex-col tw:gap-2">
         <h3 class="tw:m-0" i18n="@@opponentLeads.backTitle">Paires de back</h3>
-        <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
+        <div
+          class="tw:flex tw:flex-row tw:w-full tw:gap-2 tw:items-center tw:border tw:border-base-300 tw:rounded-box tw:p-3"
+          role="list"
+        >
           @for (bp of sortedBackPairs(); track $index) {
-            <li
-              class="tw:border tw:border-base-300 tw:rounded-box tw:p-3 tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center"
+            <div
+              class="tw:flex tw:flex-1 tw:flex-row tw:items-center tw:justify-center tw:gap-2 tw:min-w-0"
+              role="listitem"
             >
-              <div class="tw:flex tw:gap-2">
-                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), bp.value[0])" />
-                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), bp.value[1])" />
-              </div>
-              <span class="tw:font-medium">{{ freqPercent(bp) }}</span>
-            </li>
+              <app-pokemon-portrait [pokemon]="mon(opponentTeam(), bp.value[0])" />
+              <app-pokemon-portrait [pokemon]="mon(opponentTeam(), bp.value[1])" />
+              <span class="tw:font-medium tw:text-sm tw:whitespace-nowrap">{{ freqPercent(bp) }}</span>
+            </div>
           }
-        </ul>
+        </div>
       </section>
+
+      @if (sortedBackMarginals().length) {
+        <section class="tw:flex tw:flex-col tw:gap-2">
+          <h3 class="tw:m-0" i18n="@@opponentLeads.backMarginalsTitle">Présence individuelle au back</h3>
+          <div
+            class="tw:flex tw:flex-row tw:w-full tw:gap-2 tw:items-center tw:border tw:border-base-300 tw:rounded-box tw:p-3"
+            role="list"
+          >
+            @for (marg of sortedBackMarginals(); track marg.value) {
+              <div
+                class="tw:flex tw:flex-1 tw:flex-row tw:items-center tw:justify-center tw:gap-2 tw:min-w-0"
+                role="listitem"
+              >
+                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), marg.value)" />
+                <span class="tw:font-medium tw:text-sm tw:whitespace-nowrap">{{
+                  freqPercent(marg)
+                }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      }
 
       @if (active.turn1EndObservations.length) {
         <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-3">
