@@ -1,0 +1,21 @@
+@let t = team();
+<div class="tw:flex tw:flex-col tw:gap-2">
+  <h2 class="tw:m-0">{{ t.name }}</h2>
+  <div
+    class="tw:flex tw:flex-row tw:gap-2 tw:pb-1 tw:min-w-0"
+    [class.tw:overflow-x-auto]="!pokemonDetailsOnHover()"
+    [class.tw:overflow-visible]="pokemonDetailsOnHover()"
+    role="list"
+    [attr.aria-label]="'Pokémon de ' + t.name"
+  >
+    @for (mon of t.pokemon; track mon.slot) {
+      <div role="listitem" class="tw:shrink-0">
+        <app-pokemon-portrait
+          [pokemon]="mon"
+          [showSetDetails]="pokemonDetailsOnHover()"
+          [detailPopoverAlign]="detailPopoverAlign()"
+        />
+      </div>
+    }
+  </div>
+</div>

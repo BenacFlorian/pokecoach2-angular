@@ -1,0 +1,80 @@
+@let rec = recommendation();
+@let ours = ourTeam();
+<div
+  class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:items-start"
+>
+  <div class="tw:flex tw:flex-col tw:gap-4">
+    <p class="tw:text-sm tw:text-base-content/70" i18n="@@leadPick.demoNote">
+      Données de démonstration — pourcentages sur l’échantillon fictif.
+    </p>
+    <p>{{ rec.justification }}</p>
+
+    <div class="tw:flex tw:flex-col tw:gap-3">
+      <h3 class="tw:m-0" i18n="@@leadPick.ourFour">Nos quatre</h3>
+      <div class="tw:flex tw:flex-wrap tw:gap-4 tw:p-2">
+        @for (slot of rec.ourFourSlots; track slot) {
+          <div
+            class="tw:p-3 tw:rounded-box"
+            [class.tw:ring-2]="rec.ourLeadSlots.includes(slot)"
+            [class.tw:ring-primary]="rec.ourLeadSlots.includes(slot)"
+          >
+            <app-pokemon-portrait [pokemon]="ours.pokemon[slot]" />
+            @if (rec.ourLeadSlots.includes(slot)) {
+              <span class="tw:text-xs tw:block tw:text-center tw:mt-1" i18n="@@leadPick.leadTag"
+                >Lead</span
+              >
+            } @else {
+              <span class="tw:text-xs tw:block tw:text-center tw:mt-1" i18n="@@leadPick.backTag"
+                >Back</span
+              >
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="tw:flex tw:flex-col tw:gap-4">
+    @for (study of rec.studiedLeads; track study.opponentLeadId) {
+      <article class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
+        <h4 class="tw:m-0">{{ leadLabel(study.opponentLeadId) }}</h4>
+        <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+          @for (action of study.primaryActions; track $index) {
+            <li>{{ formatAction(action) }}</li>
+          }
+        </ul>
+        @if (study.alternatives.length) {
+          <p class="tw:text-sm tw:mt-3" i18n="@@leadPick.alternatives">Alternatives</p>
+          <ul class="tw:list-disc tw:pl-4 tw:text-sm">
+            @for (alt of study.alternatives; track alt) {
+              <li>{{ alt }}</li>
+            }
+          </ul>
+        }
+      </article>
+    }
+
+    @for (leadId of studiedLeadIds(); track leadId) {
+      @if (!isStudied(leadId)) {
+        <p class="tw:text-sm tw:text-base-content/70">
+          {{ leadLabel(leadId) }} —
+          <span i18n="@@leadPick.notStudied">Non étudié dans cet exemple</span>
+        </p>
+      }
+    }
+
+    <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
+      <summary i18n="@@leadPick.compositions">Compositions comparées</summary>
+      <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+        @for (sel of selections(); track $index) {
+          <li>
+            {{ leadLabel(sel.opponentLeadId) }}
+            @if (winRate(sel); as rate) {
+              — {{ rate }} victoires
+            }
+          </li>
+        }
+      </ul>
+    </details>
+  </div>
+</div>

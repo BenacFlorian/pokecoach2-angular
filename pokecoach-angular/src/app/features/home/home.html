@@ -1,1 +1,45 @@
-<h1>Hello World</h1>
+<div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
+  <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
+    <h1 class="tw:m-0" i18n="@@home.title">Nos équipes</h1>
+    <button
+      type="button"
+      class="tw:btn tw:btn-soft tw:btn-primary"
+      #addBtn
+      (click)="openImport(addBtn)"
+      i18n="@@home.addTeam"
+    >
+      Ajouter une équipe
+    </button>
+  </div>
+
+  @if (store.storageWarning(); as warn) {
+    <div class="tw:alert tw:alert-warning tw:text-sm" role="status">{{ warn }}</div>
+  }
+
+  <div class="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:flex tw:flex-col tw:gap-3">
+    @if (store.teams().length === 0) {
+      <p i18n="@@home.empty">
+        Aucune équipe enregistrée. Ajoutez la vôtre ou rechargez pour retrouver les exemples locaux.
+      </p>
+    }
+    @for (team of store.teams(); track team.id) {
+      <a
+        [routerLink]="['/teams', team.id]"
+        class="tw:block tw:bg-base-100 tw:border tw:border-base-300 tw:rounded-box tw:p-4 hover:tw:bg-base-300/40 tw:no-underline tw:text-inherit"
+      >
+        <app-team-strip [team]="team" />
+        @if (team.source.url) {
+          <span class="tw:text-sm tw:text-base-content/70" i18n="@@home.pokepasteLink"
+            >Voir le Poképaste</span
+          >
+        } @else {
+          <span class="tw:text-sm tw:text-base-content/70" i18n="@@home.localSource"
+            >Source Showdown locale</span
+          >
+        }
+      </a>
+    }
+  </div>
+</div>
+
+<app-team-import-dialog context="own-team" (submitted)="onTeamImported($event)" />

@@ -1,0 +1,74 @@
+<div
+  class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:items-start"
+>
+  <div class="tw:flex tw:flex-col tw:gap-2">
+    <h3 class="tw:m-0" i18n="@@opponentLeads.listTitle">Leads adverses</h3>
+    <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
+      @for (lead of sortedLeads(); track lead.id) {
+        <li>
+          <button
+            type="button"
+            class="tw:w-full tw:text-left tw:p-3 tw:rounded-box tw:border tw:border-base-300"
+            [class.tw:bg-base-300]="lead.id === selectedLeadId()"
+            (click)="selectLead(lead.id)"
+          >
+            <div class="tw:flex tw:flex-wrap tw:gap-2 tw:items-center tw:justify-between">
+              <div class="tw:flex tw:gap-2 tw:items-center">
+                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), lead.leadSlots[0])" />
+                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), lead.leadSlots[1])" />
+              </div>
+              <span class="tw:font-medium">{{ leadLabel(lead) }}</span>
+              <span>{{ percent(lead.phaseACount, lead.phaseASampleSize) }}</span>
+            </div>
+          </button>
+        </li>
+      }
+    </ul>
+  </div>
+
+  @if (activeLead(); as active) {
+    <div class="tw:flex tw:flex-col tw:gap-4">
+      <section class="tw:flex tw:flex-col tw:gap-2">
+        <h3 class="tw:m-0" i18n="@@opponentLeads.turn1Title">Actions conjointes tour 1</h3>
+        <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
+          @for (joint of sortedJointActions(); track $index) {
+            <li
+              class="tw:border tw:border-base-300 tw:rounded-box tw:p-3 tw:flex tw:flex-wrap tw:gap-2 tw:justify-between"
+            >
+              <span class="tw:text-sm">{{ formatJoint(joint) }}</span>
+              <span class="tw:font-medium tw:shrink-0">{{ freqPercent(joint) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <section class="tw:flex tw:flex-col tw:gap-2">
+        <h3 class="tw:m-0" i18n="@@opponentLeads.backTitle">Paires de back</h3>
+        <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
+          @for (bp of sortedBackPairs(); track $index) {
+            <li
+              class="tw:border tw:border-base-300 tw:rounded-box tw:p-3 tw:flex tw:flex-wrap tw:gap-2 tw:justify-between tw:items-center"
+            >
+              <div class="tw:flex tw:gap-2">
+                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), bp.value[0])" />
+                <app-pokemon-portrait [pokemon]="mon(opponentTeam(), bp.value[1])" />
+              </div>
+              <span class="tw:font-medium">{{ freqPercent(bp) }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      @if (active.turn1EndObservations.length) {
+        <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-3">
+          <summary i18n="@@opponentLeads.observations">Observations fin de tour 1</summary>
+          <ul class="tw:text-sm tw:mt-2 tw:list-disc tw:pl-4">
+            @for (obs of active.turn1EndObservations; track obs) {
+              <li>{{ obs }}</li>
+            }
+          </ul>
+        </details>
+      }
+    </div>
+  }
+</div>

@@ -7,7 +7,9 @@
       "setup": ["npm --prefix pokecoach-angular ci"],
       "start": ["npm --prefix pokecoach-angular run start"],
       "build": ["npm --prefix pokecoach-angular run build"],
-      "test": ["npm --prefix pokecoach-angular run test -- --watch=false"]
+      "test": ["npm --prefix pokecoach-angular run test -- --watch=false"],
+      "lint": ["npm --prefix pokecoach-angular run lint"],
+      "e2e": ["npm --prefix pokecoach-angular run e2e"]
     }
   }
 }

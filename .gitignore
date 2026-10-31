@@ -9,3 +9,5 @@ pokecoach-angular/node_modules/
 pokecoach-angular/.angular/
 pokecoach-angular/dist/
 pokecoach-angular/coverage/
+pokecoach-angular/test-results/
+pokecoach-angular/playwright-report/

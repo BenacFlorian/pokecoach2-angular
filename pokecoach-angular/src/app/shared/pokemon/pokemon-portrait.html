@@ -1,0 +1,89 @@
+@let mon = pokemon();
+@let img = imageFor(mon.species) | async;
+@let summaryId = detailSummaryId(mon);
+
+<ng-template #portraitFigure>
+  <figure class="tw:flex tw:flex-col tw:items-center tw:gap-1 tw:min-w-[4.5rem]">
+    <div
+      class="tw:w-14 tw:h-14 tw:rounded-box tw:bg-base-200 tw:flex tw:items-center tw:justify-center tw:overflow-hidden"
+    >
+      @if (img && !imageFailed()) {
+        <img
+          [src]="img.url"
+          [alt]="mon.species"
+          width="56"
+          height="56"
+          class="tw:object-contain tw:w-full tw:h-full"
+          (error)="onImageError()"
+        />
+      } @else {
+        <img
+          src="/images/pokemon-placeholder.svg"
+          [alt]="mon.species"
+          width="56"
+          height="56"
+          class="tw:object-contain tw:w-full tw:h-full"
+        />
+      }
+    </div>
+    <figcaption class="tw:text-xs tw:text-center tw:max-w-[5rem] tw:truncate">
+      {{ mon.species }}
+    </figcaption>
+  </figure>
+</ng-template>
+
+@if (showSetDetails()) {
+  <div
+    class="tw:dropdown tw:dropdown-hover tw:dropdown-bottom"
+    [class.tw:dropdown-start]="detailPopoverAlign() === 'start'"
+    [class.tw:dropdown-end]="detailPopoverAlign() === 'end'"
+  >
+    <div
+      tabindex="0"
+      class="tw:rounded-box tw:outline-none focus-visible:tw:ring-2 focus-visible:tw:ring-primary"
+      [attr.aria-describedby]="summaryId"
+    >
+      <ng-container *ngTemplateOutlet="portraitFigure" />
+    </div>
+    <div
+      [id]="summaryId"
+      role="tooltip"
+      class="tw:dropdown-content tw:bg-base-100 tw:border tw:border-base-300 tw:rounded-box tw:p-3 tw:shadow-lg tw:z-50 tw:min-w-[14rem] tw:max-w-[18rem] tw:text-left tw:text-sm"
+    >
+      <p class="tw:font-semibold tw:m-0">{{ displayName(mon) }}</p>
+      @if (mon.ability) {
+        <p class="tw:m-0 tw:mt-2">
+          <span class="tw:text-base-content/70" i18n="@@pokemonDetail.ability">Talent</span>
+          {{ mon.ability }}
+        </p>
+      }
+      @if (mon.item) {
+        <p class="tw:m-0 tw:mt-1">
+          <span class="tw:text-base-content/70" i18n="@@pokemonDetail.item">Objet</span>
+          {{ mon.item }}
+        </p>
+      }
+      @if (mon.nature) {
+        <p class="tw:m-0 tw:mt-1">
+          <span class="tw:text-base-content/70" i18n="@@pokemonDetail.nature">Nature</span>
+          {{ natureDisplay(mon) }}
+        </p>
+      }
+      @if (mon.moves.length) {
+        <p class="tw:text-base-content/70 tw:m-0 tw:mt-2" i18n="@@pokemonDetail.moves">Capacités</p>
+        <ul class="tw:list-disc tw:pl-4 tw:m-0">
+          @for (move of mon.moves; track move) {
+            <li>{{ move }}</li>
+          }
+        </ul>
+      }
+      @if (!mon.ability && !mon.item && !mon.nature && !mon.moves.length) {
+        <p class="tw:m-0 tw:mt-2 tw:text-base-content/70" i18n="@@pokemonDetail.empty">
+          Aucun détail Showdown enregistré pour ce Pokémon.
+        </p>
+      }
+    </div>
+  </div>
+} @else {
+  <ng-container *ngTemplateOutlet="portraitFigure" />
+}

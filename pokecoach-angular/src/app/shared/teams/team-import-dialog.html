@@ -1,0 +1,128 @@
+<dialog
+  #dialog
+  class="tw:modal"
+  [attr.aria-labelledby]="'team-import-title'"
+  (cancel)="onDialogCancel($event)"
+>
+  <div class="tw:modal-box tw:border tw:border-base-300">
+    <h2 id="team-import-title" class="tw:m-0">
+      @if (context() === 'own-team') {
+        <span i18n="@@teamImport.titleOwn">Ajouter une équipe</span>
+      } @else {
+        <span i18n="@@teamImport.titleOpponent">Préparer un match up</span>
+      }
+    </h2>
+
+    <form class="tw:flex tw:flex-col tw:gap-4 tw:mt-4" [formGroup]="form" (ngSubmit)="submit()">
+      <label class="tw:flex tw:flex-col tw:gap-1">
+        <span i18n="@@teamImport.nameLabel">Nom</span>
+        <input
+          id="team-import-name"
+          class="tw:input tw:input-bordered tw:w-full"
+          formControlName="name"
+          autocomplete="off"
+        />
+      </label>
+
+      <fieldset class="tw:flex tw:flex-col tw:gap-2">
+        <legend class="tw:text-sm" i18n="@@teamImport.sourceLegend">Source</legend>
+        <div class="tw:flex tw:flex-wrap tw:gap-2">
+          <label class="tw:label tw:cursor-pointer tw:gap-2">
+            <input
+              type="radio"
+              name="sourceMode"
+              class="tw:radio tw:radio-sm"
+              [checked]="sourceMode() === 'url'"
+              (change)="setMode('url')"
+            />
+            <span i18n="@@teamImport.modeUrl">URL Poképaste</span>
+          </label>
+          <label class="tw:label tw:cursor-pointer tw:gap-2">
+            <input
+              type="radio"
+              name="sourceMode"
+              class="tw:radio tw:radio-sm"
+              [checked]="sourceMode() === 'text'"
+              (change)="setMode('text')"
+            />
+            <span i18n="@@teamImport.modeText">Texte Showdown</span>
+          </label>
+        </div>
+      </fieldset>
+
+      @if (sourceMode() === 'url') {
+        <label class="tw:flex tw:flex-col tw:gap-1">
+          <span i18n="@@teamImport.urlLabel">URL</span>
+          <input
+            class="tw:input tw:input-bordered tw:w-full"
+            formControlName="url"
+            inputmode="url"
+            placeholder="https://pokepast.es/…"
+          />
+        </label>
+      } @else {
+        <label class="tw:flex tw:flex-col tw:gap-1">
+          <span i18n="@@teamImport.textLabel">Texte Showdown</span>
+          <textarea
+            class="tw:textarea tw:textarea-bordered tw:w-full tw:min-h-40"
+            formControlName="text"
+          ></textarea>
+        </label>
+      }
+
+      @if (errorMessage(); as msg) {
+        <div class="tw:alert tw:alert-error tw:text-sm" role="alert">
+          <div>
+            <p>{{ msg }}</p>
+            @if (errorDetails().length) {
+              <ul class="tw:list-disc tw:pl-4">
+                @for (d of errorDetails(); track d) {
+                  <li>{{ d }}</li>
+                }
+              </ul>
+            }
+            @if (sourceMode() === 'url') {
+              <p i18n="@@teamImport.urlHint">
+                Vérifiez le lien ou passez au texte collé si le paste est privé.
+              </p>
+            }
+          </div>
+        </div>
+      }
+
+      @if (resolving()) {
+        <p class="tw:flex tw:items-center tw:gap-2" role="status">
+          <span class="tw:loading tw:loading-spinner tw:loading-sm"></span>
+          @if (context() === 'opponent') {
+            <span i18n="@@teamImport.preparing">Préparation de démonstration…</span>
+          } @else {
+            <span i18n="@@teamImport.importing">Import en cours…</span>
+          }
+        </p>
+      }
+
+      <div class="tw:modal-action">
+        <button
+          type="button"
+          class="tw:btn tw:btn-ghost"
+          [disabled]="resolving()"
+          (click)="close()"
+          i18n="@@teamImport.cancel"
+        >
+          Annuler
+        </button>
+        <button
+          type="submit"
+          class="tw:btn tw:btn-primary"
+          [disabled]="resolving()"
+          i18n="@@teamImport.submit"
+        >
+          Valider
+        </button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="tw:modal-backdrop">
+    <button type="submit" aria-label="Fermer">close</button>
+  </form>
+</dialog>
