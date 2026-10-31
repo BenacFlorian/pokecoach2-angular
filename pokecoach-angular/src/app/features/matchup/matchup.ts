@@ -253,6 +253,14 @@ export class Matchup {
     return this.runResult()?.report.selectionComparisons ?? null;
   }
 
+  refinementForTab(): import('../../core/models/simulation-result.model').RefinementSectionV2 | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.refinement;
+    }
+    return null;
+  }
+
   gameplanForTab(): GameplanReport | null {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {

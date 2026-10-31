@@ -86,6 +86,37 @@
     }
   </div>
 </div>
+
+@if (refinement(); as ref) {
+  <section class="tw:mt-8 tw:border-t tw:border-base-300 tw:pt-6">
+    <h3 class="tw:m-0" i18n="@@leadPick.refinementTitle">Affinage (phase D)</h3>
+    @for (line of ref.limitations; track line) {
+      <p class="tw:text-sm tw:text-base-content/80 tw:mb-2">{{ line }}</p>
+    }
+    <p class="tw:text-sm tw:font-medium">{{ refinementOutcomeLabel(ref) }}</p>
+    <div class="tw:flex tw:flex-wrap tw:gap-4 tw:mt-3">
+      @for (slot of displayRefinementFour(ref); track slot) {
+        <div
+          class="tw:p-2 tw:rounded-box"
+          [class.tw:ring-2]="ref.configuration.ourLeadSlots.includes(slot)"
+          [class.tw:ring-secondary]="ref.configuration.ourLeadSlots.includes(slot)"
+        >
+          <app-pokemon-portrait [pokemon]="ourTeam().pokemon[slot]" />
+        </div>
+      }
+    </div>
+    @if (ref.firstTurns.length) {
+      <p class="tw:text-sm tw:mt-4" i18n="@@leadPick.refinementTurn1">Premiers tours observés (D)</p>
+      <ul class="tw:list-disc tw:pl-4 tw:text-sm">
+        @for (row of ref.firstTurns; track $index) {
+          @if (formatRefinementTurnRow(row); as label) {
+            <li>{{ label }}</li>
+          }
+        }
+      </ul>
+    }
+  </section>
+}
 } @else {
   <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
 }

@@ -5,7 +5,7 @@ import type {
   SelectionResult,
 } from '../models/matchup.model';
 import type { PokemonSlot } from '../models/team.model';
-import type { SimulationResultV2 } from '../models/simulation-result.model';
+import type { RefinementSectionV2, SimulationResultV2 } from '../models/simulation-result.model';
 
 export interface SimulationTabDisplay {
   opponentLeads: readonly OpponentLeadStats[] | null;
@@ -13,6 +13,7 @@ export interface SimulationTabDisplay {
   leadRecommendation: LeadRecommendation | null;
   selectionComparisons: readonly SelectionResult[] | null;
   studiedLeadIds: readonly string[];
+  refinement: RefinementSectionV2 | null;
   gameplan: GameplanReport | null;
 }
 
@@ -21,6 +22,7 @@ export function mapSimulationV2ToTabDisplay(
 ): SimulationTabDisplay {
   const phaseB = partial.completedPhases.includes('B');
   const phaseC = partial.completedPhases.includes('C');
+  const phaseD = partial.completedPhases.includes('D');
   const phaseSynthesis = partial.completedPhases.includes('synthesis');
 
   const opponentLeads = partial.opponentLeads
@@ -50,6 +52,7 @@ export function mapSimulationV2ToTabDisplay(
     leadRecommendation: phaseC ? leadRecommendation : null,
     selectionComparisons: phaseC ? selectionComparisons : null,
     studiedLeadIds,
+    refinement: phaseD ? partial.refinement : null,
     gameplan,
   };
 }
