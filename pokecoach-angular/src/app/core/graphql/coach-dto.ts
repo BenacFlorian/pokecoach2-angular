@@ -33,6 +33,7 @@ export interface GqlMatchupNode {
   id: string;
   ourTeamId: string;
   opponentTeamId: string;
+  regulation: string | null;
   createdAt: string;
   isDeleted: boolean;
   opponentTeam: GqlTeamNode | null;

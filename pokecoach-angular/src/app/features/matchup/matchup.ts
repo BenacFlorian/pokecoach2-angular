@@ -29,6 +29,7 @@ type MatchupTab = 'opponent-leads' | 'lead-pick' | 'gameplan';
 export class Matchup {
   readonly teamId = input.required<string>();
   readonly matchupId = input.required<string>();
+  readonly runId = input<string>();
 
   readonly store = inject(CoachStore);
   private readonly destroyRef = inject(DestroyRef);
@@ -124,16 +125,20 @@ export class Matchup {
     if (!detail) {
       return null;
     }
-    if (this.runResult() && detail.latestRun) {
-      const active = activeRunStatusMessage(detail.latestRun);
+    const run = this.selectedRun();
+    if (this.runIdMismatch()) {
+      return 'Run introuvable pour ce matchup.';
+    }
+    if (this.runResult() && run) {
+      const active = activeRunStatusMessage(run);
       if (active) {
         return active;
       }
     }
-    if (!detail.latestRun) {
+    if (!run) {
       return 'Matchup enregistré — aucune analyse disponible';
     }
-    return activeRunStatusMessage(detail.latestRun);
+    return activeRunStatusMessage(run);
   }
 
   incompatibleMessage(): string | null {
@@ -193,7 +198,8 @@ export class Matchup {
       return;
     }
     const detail = this.store.matchupDetail();
-    if (!detail || !shouldPollRun(detail.latestRun)) {
+    const run = this.selectedRun();
+    if (!detail || !shouldPollRun(run)) {
       return;
     }
     const teamId = this.teamId();
@@ -201,6 +207,30 @@ export class Matchup {
     this.pollTimer = setInterval(() => {
       this.store.refreshMatchup(teamId, matchupId);
     }, 5000);
+  }
+
+  selectedRun() {
+    const detail = this.store.matchupDetail();
+    if (!detail) {
+      return null;
+    }
+    const param = this.runId()?.trim();
+    if (param) {
+      return detail.runs.find((r) => r.id === param) ?? null;
+    }
+    return detail.latestRun;
+  }
+
+  runIdMismatch(): boolean {
+    const param = this.runId()?.trim();
+    if (!param) {
+      return false;
+    }
+    const detail = this.store.matchupDetail();
+    if (!detail || detail.runs.length === 0) {
+      return false;
+    }
+    return !detail.runs.some((r) => r.id === param);
   }
 
   private stopPolling(): void {

@@ -42,6 +42,7 @@ export interface MatchupSummary {
   teamId: string;
   opponent: Team;
   createdAt: string;
+  regulation: string | null;
   latestRun: RunSummary | null;
   hasSuccessfulReport: boolean;
 }
@@ -57,7 +58,9 @@ export interface MatchupDetail {
   ourTeam: Team;
   opponentTeam: Team;
   createdAt: string;
+  regulation: string | null;
   latestRun: RunSummary | null;
+  runs: RunSummary[];
   successfulResult: SuccessfulResultState;
 }
 
@@ -268,6 +271,7 @@ export function mapMatchupSummary(
     teamId: node.ourTeamId,
     opponent,
     createdAt: normalizeIso(node.createdAt),
+    regulation: node.regulation ?? null,
     latestRun,
     hasSuccessfulReport: Boolean(node.latestSuccessfulRun?.id),
   };
@@ -286,6 +290,10 @@ export function mapMatchupDetail(
     return null;
   }
   const latestRun = mapRunSummary(node.matchupRuns?.nodes?.[0] ?? null);
+  const runs =
+    node.matchupRuns?.nodes
+      ?.map((n) => mapRunSummary(n))
+      .filter((r): r is RunSummary => r !== null) ?? [];
   const successfulResult = mapSuccessfulRun(node.latestSuccessfulRun);
   return {
     id: node.id,
@@ -293,7 +301,9 @@ export function mapMatchupDetail(
     ourTeam,
     opponentTeam,
     createdAt: normalizeIso(node.createdAt),
+    regulation: node.regulation ?? null,
     latestRun,
+    runs,
     successfulResult,
   };
 }
@@ -350,22 +360,48 @@ export function teamInputFromImported(
     sourceKind: imported.source.kind,
     sourceUrl: imported.source.url ?? null,
     sourceText: imported.source.rawText,
-    pokemon: imported.pokemon.map((p) => ({
-      slot: p.slot,
-      species: p.species,
-      nickname: p.nickname ?? null,
-      gender: p.gender ?? null,
-      item: p.item ?? null,
-      ability: p.ability ?? null,
-      level: p.level ?? null,
-      teraType: p.teraType ?? null,
-      nature: p.nature ?? null,
-      evs: p.evs ?? null,
-      ivs: p.ivs ?? null,
-      moves: [...p.moves],
-      rawBlock: p.rawBlock,
-    })),
+    pokemon: imported.pokemon.map((p) => pokemonSetToDbJson(p)),
   };
+}
+
+/** Omit null optionals — PostgreSQL `is_valid_pokemon_slot_entry` rejects explicit JSON nulls. */
+export function pokemonSetToDbJson(
+  p: import('../models/team.model').PokemonSet,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    slot: p.slot,
+    species: p.species,
+    moves: [...p.moves],
+    rawBlock: p.rawBlock,
+  };
+  if (p.nickname !== undefined && p.nickname !== '') {
+    out['nickname'] = p.nickname;
+  }
+  if (p.gender !== undefined) {
+    out['gender'] = p.gender;
+  }
+  if (p.item !== undefined && p.item !== '') {
+    out['item'] = p.item;
+  }
+  if (p.ability !== undefined && p.ability !== '') {
+    out['ability'] = p.ability;
+  }
+  if (p.level !== undefined) {
+    out['level'] = p.level;
+  }
+  if (p.teraType !== undefined && p.teraType !== '') {
+    out['teraType'] = p.teraType;
+  }
+  if (p.nature !== undefined && p.nature !== '') {
+    out['nature'] = p.nature;
+  }
+  if (p.evs !== undefined) {
+    out['evs'] = p.evs;
+  }
+  if (p.ivs !== undefined) {
+    out['ivs'] = p.ivs;
+  }
+  return out;
 }
 
 function validateMockReportV1(raw: unknown): MatchupReport | null {

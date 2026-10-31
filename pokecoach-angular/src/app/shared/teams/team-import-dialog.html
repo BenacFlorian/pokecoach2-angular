@@ -99,7 +99,11 @@
       @if (saving()) {
         <p class="tw:flex tw:items-center tw:gap-2" role="status">
           <span class="tw:loading tw:loading-spinner tw:loading-sm"></span>
-          <span i18n="@@teamImport.saving">Enregistrement sur le serveur…</span>
+          @if (preparationStatus(); as prepMsg) {
+            <span>{{ prepMsg }}</span>
+          } @else {
+            <span i18n="@@teamImport.saving">Enregistrement sur le serveur…</span>
+          }
         </p>
       }
 
@@ -116,7 +120,7 @@
         <button
           type="submit"
           class="tw:btn tw:btn-primary"
-          [disabled]="resolving() || saving()"
+          [disabled]="!canSubmit()"
           i18n="@@teamImport.submit"
         >
           Valider

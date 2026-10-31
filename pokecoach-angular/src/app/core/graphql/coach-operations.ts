@@ -67,6 +67,7 @@ export const LIST_MATCHUPS = `
       nodes {
         id
         ourTeamId
+        regulation
         createdAt
         opponentTeam {
           ${TEAM_FIELDS}
@@ -95,6 +96,7 @@ export const GET_MATCHUP = `
       id
       ourTeamId
       opponentTeamId
+      regulation
       createdAt
       ourTeam {
         ${TEAM_FIELDS}
@@ -102,7 +104,7 @@ export const GET_MATCHUP = `
       opponentTeam {
         ${TEAM_FIELDS}
       }
-      matchupRuns(first: 1, orderBy: [CREATED_AT_DESC, ID_DESC]) {
+      matchupRuns(first: 20, orderBy: [CREATED_AT_DESC, ID_DESC]) {
         nodes {
           ${RUN_SUMMARY_FIELDS}
         }
@@ -130,6 +132,7 @@ export const CREATE_OPPONENT_MATCHUP = `
       matchup {
         id
         ourTeamId
+        regulation
         opponentTeamId
         createdAt
         opponentTeam {

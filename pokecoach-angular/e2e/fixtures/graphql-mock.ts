@@ -78,8 +78,17 @@ export interface MockGraphqlState {
   matchups: {
     id: string;
     ourTeamId: string;
+    regulation: string | null;
     opponentTeam: ReturnType<typeof teamNode>;
     createdAt: string;
+    runs: {
+      id: string;
+      status: string;
+      processStatus: string;
+      source: string;
+      createdAt: string;
+      finishedAt: string | null;
+    }[];
   }[];
 }
 
@@ -148,10 +157,11 @@ export async function installGraphqlMock(
         .map((m) => ({
           id: m.id,
           ourTeamId: m.ourTeamId,
+          regulation: m.regulation,
           createdAt: m.createdAt,
           opponentTeam: m.opponentTeam,
           latestSuccessfulRun: null,
-          matchupRuns: { nodes: [] },
+          matchupRuns: { nodes: m.runs.slice(0, 1) },
         }));
       await route.fulfill({
         status: 200,
@@ -178,6 +188,8 @@ export async function installGraphqlMock(
         };
       };
       const m = input.matchup;
+      const regulation =
+        (m as { regulation?: string }).regulation ?? 'regulation-g';
       const opponent = teamNode(
         m.teamToOpponentTeamId.create.id,
         m.teamToOpponentTeamId.create.name,
@@ -187,12 +199,15 @@ export async function installGraphqlMock(
       state.matchups.push({
         id: m.id,
         ourTeamId: m.ourTeamId,
+        regulation,
         opponentTeam: opponent,
         createdAt: new Date().toISOString(),
+        runs: [],
       });
       const summary = {
         id: m.id,
         ourTeamId: m.ourTeamId,
+        regulation,
         createdAt: new Date().toISOString(),
         opponentTeam: opponent,
         latestSuccessfulRun: null,
@@ -231,10 +246,11 @@ export async function installGraphqlMock(
               id: row.id,
               ourTeamId: row.ourTeamId,
               opponentTeamId: row.opponentTeam.id,
+              regulation: row.regulation,
               createdAt: row.createdAt,
               ourTeam,
               opponentTeam: row.opponentTeam,
-              matchupRuns: { nodes: [] },
+              matchupRuns: { nodes: row.runs },
               latestSuccessfulRun: null,
             },
           },

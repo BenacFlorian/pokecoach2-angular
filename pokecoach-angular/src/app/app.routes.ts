@@ -5,9 +5,13 @@ import { TeamDetail } from './features/team-detail/team-detail';
 import { Matchup } from './features/matchup/matchup';
 import { NotFound } from './shared/not-found/not-found';
 import { DesignSystem } from './features/developer/design-system';
+import { DemoData } from './features/developer/demo-data';
 
 const devRoutes: Routes = isDevMode()
-  ? [{ path: 'developer/design-system', component: DesignSystem }]
+  ? [
+      { path: 'developer/design-system', component: DesignSystem },
+      { path: 'developer/demo-data', component: DemoData },
+    ]
   : [];
 
 export const routes: Routes = [

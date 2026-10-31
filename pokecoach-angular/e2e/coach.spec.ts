@@ -27,9 +27,7 @@ test.describe('parcours pokecoach', () => {
     await installGraphqlMock(page, state);
   });
 
-  test('accueil, équipe texte, adversaire, matchup sans analyse', async ({
-    page,
-  }) => {
+  test('accueil, équipe texte, adversaire, page matchup', async ({ page }) => {
     await page.goto('/');
 
     await expect(page.getByText('Aucune équipe enregistrée')).toBeVisible();
@@ -53,13 +51,8 @@ test.describe('parcours pokecoach', () => {
     await page.locator('textarea').fill(SAMPLE_PASTE);
     await page.getByRole('button', { name: 'Valider' }).click();
 
-    await expect(page.getByRole('link', { name: /Adv URL/ })).toBeVisible({
-      timeout: 10_000,
-    });
-
-    await page.getByRole('link', { name: /Adv URL/ }).click();
     await expect(
       page.getByText('Matchup enregistré — aucune analyse disponible'),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
   });
 });

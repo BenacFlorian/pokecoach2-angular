@@ -6,7 +6,7 @@ import {
   DEMO_IMPORTED_OPPONENT,
   DEMO_IMPORTED_OUR,
 } from '../../../testing/fixtures/demo-teams';
-import { mapPokemonJson, mapTeamNode } from './coach-mappers';
+import { mapPokemonJson, mapTeamNode, pokemonSetToDbJson } from './coach-mappers';
 import type { GqlTeamNode } from './coach-dto';
 
 describe('coach mappers', () => {
@@ -18,6 +18,18 @@ describe('coach mappers', () => {
 
   it('rejects malformed pokemon json', () => {
     expect(mapPokemonJson([{ slot: 0 }])).toBeNull();
+  });
+
+  it('omits null pokemon fields for database constraint', () => {
+    const json = pokemonSetToDbJson({
+      slot: 0,
+      species: 'Pikachu',
+      moves: ['Thunderbolt'],
+      rawBlock: 'x',
+    });
+    expect(json).not.toHaveProperty('gender');
+    expect(json).not.toHaveProperty('level');
+    expect(json).not.toHaveProperty('evs');
   });
 
   it('maps owned team node', () => {

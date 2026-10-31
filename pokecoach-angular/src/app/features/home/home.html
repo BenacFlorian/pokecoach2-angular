@@ -1,16 +1,21 @@
 <div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
   <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
     <h1 class="tw:m-0" i18n="@@home.title">Nos équipes</h1>
-    <button
+    <div class="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
+      @if (showDevLinks) {
+        <a routerLink="/developer/demo-data" class="tw:btn tw:btn-ghost tw:btn-sm">Demo seed</a>
+      }
+      <button
       type="button"
       class="tw:btn tw:btn-soft tw:btn-primary"
       #addBtn
       [disabled]="savingTeam"
       (click)="openImport(addBtn)"
       i18n="@@home.addTeam"
-    >
-      Ajouter une équipe
-    </button>
+      >
+        Ajouter une équipe
+      </button>
+    </div>
   </div>
 
   @if (saveTeamError; as err) {

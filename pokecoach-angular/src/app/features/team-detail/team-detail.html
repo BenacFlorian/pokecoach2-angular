@@ -1,3 +1,4 @@
+@let prep = preparation.snapshot();
 @let current = store.teamDetail();
 <div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
   @if (store.teamDetailState() === 'loading') {
@@ -23,7 +24,7 @@
         type="button"
         class="tw:btn tw:btn-primary"
         #prepBtn
-        [disabled]="savingMatchup"
+        [disabled]="preparationBusy()"
         (click)="openOpponentImport(prepBtn)"
         i18n="@@teamDetail.prepareMatchup"
       >
@@ -31,7 +32,7 @@
       </button>
     </div>
 
-    @if (saveMatchupError; as err) {
+    @if (prep.creationError; as err) {
       <div class="tw:alert tw:alert-error" role="alert">{{ err }}</div>
     }
 
@@ -86,4 +87,8 @@
   }
 </div>
 
-<app-team-import-dialog context="opponent" (submitted)="onOpponentSubmitted($event)" />
+<app-team-import-dialog
+  context="opponent"
+  [preparationStatus]="prep.statusMessage"
+  (submitted)="onOpponentSubmitted($event)"
+/>

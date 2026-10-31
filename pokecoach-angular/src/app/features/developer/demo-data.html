@@ -1,0 +1,30 @@
+<div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4">
+  <h1 class="tw:m-0">Données de démonstration (dev)</h1>
+  <p class="tw:text-base-content/70 tw:m-0">
+    Réinstalle les équipes, le matchup et le rapport fictifs réservés via l’API Python. Les autres
+    équipes en base sont conservées.
+  </p>
+  <button
+    type="button"
+    class="tw:btn tw:btn-warning tw:w-fit"
+    [disabled]="busy"
+    (click)="confirmAndReset()"
+  >
+    @if (busy) {
+      Réinstallation…
+    } @else {
+      Réinstaller la démonstration
+    }
+  </button>
+  @if (error; as err) {
+    <div class="tw:alert tw:alert-error" role="alert">
+      <p class="tw:m-0">{{ err }}</p>
+      <button type="button" class="tw:btn tw:btn-sm" (click)="refreshGraphql()">
+        Actualiser via GraphQL
+      </button>
+    </div>
+  }
+  @if (lastMessage; as msg) {
+    <div class="tw:alert tw:alert-success" role="status">{{ msg }}</div>
+  }
+</div>

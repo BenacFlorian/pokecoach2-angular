@@ -326,7 +326,7 @@ export class CoachStore {
   }
 
   /** Test helper */
-  resetForTests(): void {
+  invalidateAll(): void {
     this.teamsRequestGen++;
     this.teamDetailGen++;
     this.matchupsRequestGen++;
@@ -339,6 +339,10 @@ export class CoachStore {
     this.teamDetailResource.set(emptyDetail());
     this.matchupsResource.set(emptyList());
     this.matchupDetailResource.set(emptyDetail());
+  }
+
+  resetForTests(): void {
+    this.invalidateAll();
   }
 }
 

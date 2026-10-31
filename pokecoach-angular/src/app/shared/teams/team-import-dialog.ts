@@ -34,6 +34,7 @@ export class TeamImportDialog {
   private readonly host = inject(ElementRef<HTMLElement>);
 
   readonly context = input<TeamImportContext>('own-team');
+  readonly preparationStatus = input<string | null>(null);
   readonly submitted = output<TeamImportSubmit>();
   readonly cancelled = output<void>();
 
@@ -168,5 +169,18 @@ export class TeamImportDialog {
   resetLoading(): void {
     this.resolving.set(false);
     this.saving.set(false);
+  }
+
+  canSubmit(): boolean {
+    if (this.resolving() || this.saving()) {
+      return false;
+    }
+    if (!this.form.controls.name.value.trim()) {
+      return false;
+    }
+    if (this.sourceMode() === 'url') {
+      return Boolean(this.form.controls.url.value.trim());
+    }
+    return Boolean(this.form.controls.text.value.trim());
   }
 }

@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, viewChild } from '@angular/core';
+import { Component, inject, isDevMode, OnInit, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs/operators';
 import { CoachStore } from '../../core/data/coach-store';
@@ -14,6 +14,7 @@ import type { TeamImportSubmit } from '../../shared/teams/team-import-dialog';
 })
 export class Home implements OnInit {
   readonly store = inject(CoachStore);
+  readonly showDevLinks = isDevMode();
   readonly importDialog = viewChild.required(TeamImportDialog);
 
   savingTeam = false;
