@@ -38,7 +38,7 @@ describe('AnalysisApi', () => {
     req.flush({
       phases: ['A'],
       profiles: ['standard', 'smoke'],
-      regulations: ['regulation-g'],
+      regulations: ['M-B'],
     });
     expect(phases).toEqual(['A']);
   });

@@ -209,7 +209,11 @@ export class CoachStore {
     const key = `${teamId}:${matchupId}`;
     if (!isUuid(teamId) || !isUuid(matchupId)) {
       this.matchupDetailResource.set({ state: 'not-found', value: null, error: null });
+      this.clearSelectedRun();
       return;
+    }
+    if (key !== this.matchupDetailKey) {
+      this.clearSelectedRun();
     }
     const gen = ++this.matchupDetailGen;
     this.matchupDetailKey = key;
@@ -251,6 +255,15 @@ export class CoachStore {
 
   refreshRun(teamId: string, matchupId: string, runId: string): void {
     this.fetchRun(teamId, matchupId, runId, { showLoading: false });
+  }
+
+  private clearSelectedRun(): void {
+    this.selectedRunGen++;
+    this.selectedRunSub?.unsubscribe();
+    this.selectedRunSub = null;
+    this.selectedRunKey = '';
+    this.selectedRunRevision = -1;
+    this.selectedRunResource.set(emptyDetail());
   }
 
   private fetchRun(
@@ -325,6 +338,10 @@ export class CoachStore {
     imported: ImportedTeam,
   ) {
     return this.api.createOpponentMatchup(ids, teamId, name, imported);
+  }
+
+  setMatchupRegulation(teamId: string, matchupId: string, regulation: string) {
+    return this.api.updateMatchupRegulation(matchupId, regulation);
   }
 
   reconcileMatchup(teamId: string, matchupId: string) {

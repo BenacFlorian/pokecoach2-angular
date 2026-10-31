@@ -3,11 +3,15 @@ import { HttpErrorResponse } from '@angular/common/http';
 export type AnalysisErrorKind =
   | 'capabilities'
   | 'start'
+  | 'continue'
+  | 'cancel'
   | 'conflict'
   | 'validation'
   | 'unavailable'
   | 'network'
   | 'response';
+
+export type AnalysisHttpContext = 'capabilities' | 'start' | 'continue' | 'cancel';
 
 export class AnalysisError extends Error {
   readonly kind: AnalysisErrorKind;
@@ -41,9 +45,22 @@ export function analysisErrorMessage(err: unknown): string {
   return 'Le lancement de l’analyse a échoué.';
 }
 
+function defaultFailureMessage(context: AnalysisHttpContext): string {
+  switch (context) {
+    case 'capabilities':
+      return 'Impossible de charger les capacités d’analyse.';
+    case 'continue':
+      return 'La continuation de l’analyse a échoué.';
+    case 'cancel':
+      return 'L’annulation de l’analyse a échoué.';
+    default:
+      return 'Le lancement de l’analyse a échoué.';
+  }
+}
+
 export function mapHttpAnalysisError(
   err: unknown,
-  context: 'capabilities' | 'start',
+  context: AnalysisHttpContext,
 ): AnalysisError {
   if (!(err instanceof HttpErrorResponse)) {
     return new AnalysisError('network', 'Service d’analyse indisponible.', {
@@ -69,13 +86,14 @@ export function mapHttpAnalysisError(
     );
   }
   if (status === 409) {
+    const retryable = context === 'start' || context === 'continue';
     return new AnalysisError(
       'conflict',
       detailMessage ??
         (context === 'start'
           ? 'Une analyse est déjà en cours ou la commande entre en conflit.'
           : 'Conflit avec une commande existante.'),
-      { status, retryable: context === 'start' },
+      { status, retryable },
     );
   }
   if (status === 422) {
@@ -86,8 +104,10 @@ export function mapHttpAnalysisError(
     );
   }
   if (status === 404) {
+    const kind: AnalysisErrorKind =
+      context === 'capabilities' ? 'capabilities' : context;
     return new AnalysisError(
-      context === 'capabilities' ? 'capabilities' : 'start',
+      kind,
       context === 'capabilities'
         ? 'Service d’analyse introuvable. Vérifiez que l’API Python tourne (port 8042).'
         : detailMessage ?? 'Ressource introuvable.',
@@ -106,11 +126,8 @@ export function mapHttpAnalysisError(
       retryable: status >= 500,
     });
   }
-  return new AnalysisError(
-    context,
-    context === 'capabilities'
-      ? 'Impossible de charger les capacités d’analyse.'
-      : 'Le lancement de l’analyse a échoué.',
-    { status, retryable: status >= 500 },
-  );
+  return new AnalysisError(context, defaultFailureMessage(context), {
+    status,
+    retryable: status >= 500,
+  });
 }

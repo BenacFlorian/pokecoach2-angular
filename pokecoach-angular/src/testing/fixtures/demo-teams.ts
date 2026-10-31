@@ -3,67 +3,67 @@ import type { ImportedTeam, Team } from '../../app/core/models/team.model';
 
 const parser = new PokepasteParser();
 
-/** https://pokepast.es/9d3c3ee9e145f6b8 — Chompy, VR October Challenge Top 4 (Reg MC) */
+/** https://pokepast.es/e46c2a79dcd8d00c — jit_vgc Worlds 2026 (Reg MB) */
 export const DEMO_OUR_TEAM_PASTE = `
-Farigiraf @ Sitrus Berry
-Ability: Armor Tail
+Excadrill (F) @ Focus Sash
+Ability: Sand Rush
 Level: 50
-EVs: 29 HP / 22 Def / 15 SpD
-Calm Nature
+EVs: 2 HP / 32 Atk / 32 Spe
+Adamant Nature
+- High Horsepower
+- Rock Slide
+- Iron Head
 - Protect
-- Psychic
+
+Tyranitar (M) @ Tyranitarite
+Ability: Sand Stream
+Level: 50
+EVs: 16 HP / 18 Atk / 32 Spe
+Jolly Nature
+- Rock Slide
+- Protect
+- Knock Off
+- Low Kick
+
+Sinistcha @ Colbur Berry
+Ability: Hospitality
+Level: 50
+EVs: 29 HP / 15 Def / 22 SpD
+Bold Nature
+- Rage Powder
 - Trick Room
-- Helping Hand
-
-Camerupt @ Cameruptite
-Ability: Solid Rock
-Level: 50
-EVs: 32 HP / 2 Def / 32 SpA
-Quiet Nature
+- Matcha Gotcha
 - Protect
-- Heat Wave
-- Ancient Power
-- Earth Power
 
-Sylveon @ Fairy Feather
-Ability: Pixilate
-Level: 50
-EVs: 31 HP / 13 Def / 21 SpA / 1 SpD
-Modest Nature
-- Protect
-- Moonblast
-- Hyper Voice
-- Calm Mind
-
-Raichu @ Raichunite Y
-Ability: Lightning Rod
-Level: 50
-EVs: 30 HP / 12 Def / 24 Spe
-Timid Nature
-- Protect
-- Fake Out
-- Zap Cannon
-- Focus Blast
-
-Incineroar @ Charcoal
+Staraptor (M) @ Staraptite
 Ability: Intimidate
 Level: 50
-EVs: 32 HP / 32 Atk / 2 SpD
-Brave Nature
-- Fake Out
-- Parting Shot
-- Flare Blitz
-- Darkest Lariat
+EVs: 21 HP / 11 Atk / 2 SpD / 32 Spe
+Jolly Nature
+- Brave Bird
+- Tailwind
+- Protect
+- Close Combat
 
-Rillaboom @ Life Orb
-Ability: Grassy Surge
+Milotic (M) @ Sitrus Berry
+Ability: Competitive
 Level: 50
-EVs: 32 HP / 27 Atk / 6 SpD / 1 Spe
-Adamant Nature
-- Grassy Glide
-- Fake Out
-- Wood Hammer
-- U-turn
+EVs: 30 HP / 21 Def / 2 SpD / 13 Spe
+Bold Nature
+- Scald
+- Icy Wind
+- Ice Beam
+- Protect
+
+Gholdengo @ Life Orb
+Ability: Good as Gold
+Level: 50
+EVs: 27 HP / 13 Def / 7 SpA / 10 SpD / 9 Spe
+Modest Nature
+- Make It Rain
+- Shadow Ball
+- Nasty Plot
+- Protect
 `.trim();
 
 /** https://pokepast.es/a3405a6e98d765aa — Nirinbo, Battle Cruise Top 8 (Reg MC) */
@@ -129,7 +129,7 @@ Adamant Nature
 - Dragon Claw
 `.trim();
 
-export const DEMO_OUR_POKEPASTE_URL = 'https://pokepast.es/9d3c3ee9e145f6b8';
+export const DEMO_OUR_POKEPASTE_URL = 'https://pokepast.es/e46c2a79dcd8d00c';
 export const DEMO_OPPONENT_POKEPASTE_URL = 'https://pokepast.es/a3405a6e98d765aa';
 
 function parsePaste(raw: string, url?: string): ImportedTeam {
@@ -170,7 +170,7 @@ export const DEMO_IMPORTED_OPPONENT = parsePaste(
 
 export const DEMO_TEAM_WITH_MATCHUP = buildDemoTeam(
   'demo-team-matchup',
-  'Chompy — VR Top 4 (Reg MC)',
+  'jit_vgc — Worlds 2026 (Reg MB)',
   DEMO_IMPORTED_OUR,
   '2026-10-01T10:00:00.000Z',
 );

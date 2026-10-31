@@ -54,6 +54,14 @@
       </div>
     </div>
 
+    <app-analysis-controls
+      [teamId]="teamId()"
+      [matchupId]="matchupId()"
+      [selectedRun]="selectedRunSummary()"
+      [capabilities]="capabilities()"
+      (runStarted)="onRunStarted($event)"
+    />
+
     @if (latestRunMessage(); as statusMsg) {
       <p class="tw:text-sm tw:text-base-content/80 tw:m-0" role="status">{{ statusMsg }}</p>
     }

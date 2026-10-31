@@ -22,6 +22,9 @@ import type {
   SelectionResult,
 } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
+import type { AnalysisCapabilitiesView } from '../../core/python/analysis-api.models';
+import { AnalysisApi } from '../../core/python/analysis-api';
+import { AnalysisControls } from './analysis-controls';
 import { GameplanTab } from './gameplan';
 import { LeadPick } from './lead-pick';
 import { OpponentLeads } from './opponent-leads';
@@ -31,7 +34,7 @@ type MatchupTab = 'opponent-leads' | 'lead-pick' | 'gameplan';
 
 @Component({
   selector: 'app-matchup',
-  imports: [RouterLink, TeamStrip, OpponentLeads, LeadPick, GameplanTab],
+  imports: [RouterLink, TeamStrip, OpponentLeads, LeadPick, GameplanTab, AnalysisControls],
   templateUrl: './matchup.html',
 })
 export class Matchup {
@@ -40,7 +43,10 @@ export class Matchup {
   readonly runId = input<string>();
 
   readonly store = inject(CoachStore);
+  private readonly analysisApi = inject(AnalysisApi);
   private readonly destroyRef = inject(DestroyRef);
+
+  readonly capabilities = signal<AnalysisCapabilitiesView | null>(null);
 
   readonly activeTab = signal<MatchupTab>('opponent-leads');
   readonly selectedLeadId = signal<string>('');
@@ -110,6 +116,11 @@ export class Matchup {
         document.removeEventListener('visibilitychange', this.onVisibilityChange),
       );
     }
+
+    this.analysisApi.capabilities().subscribe({
+      next: (view) => this.capabilities.set(view),
+      error: () => this.capabilities.set(null),
+    });
   }
 
   private readonly onVisibilityChange = (): void => {
@@ -136,7 +147,31 @@ export class Matchup {
     if (state === 'idle' || state === 'loading') {
       return null;
     }
-    return this.store.selectedRun();
+    const run = this.selectedRunSummary();
+    const view = this.store.selectedRun();
+    if (!run) {
+      return null;
+    }
+    if (view && view.kind !== 'absent') {
+      const viewRunId = this.runIdFromSelectedView(view);
+      if (viewRunId !== null && viewRunId !== run.id) {
+        return null;
+      }
+    }
+    return view;
+  }
+
+  private runIdFromSelectedView(view: SelectedRunView): string | null {
+    switch (view.kind) {
+      case 'mock':
+        return view.result.summary.id;
+      case 'simulation':
+        return view.view.summary.id;
+      case 'incompatible':
+        return view.summary?.id ?? null;
+      case 'absent':
+        return null;
+    }
   }
 
   runResult(): RunResult | null {
@@ -368,6 +403,14 @@ export class Matchup {
       return detail.runs.find((r) => r.id === param) ?? null;
     }
     return detail.latestRun;
+  }
+
+  onRunStarted(runId: string): void {
+    const teamId = this.teamId();
+    const matchupId = this.matchupId();
+    this.store.refreshMatchup(teamId, matchupId);
+    this.store.loadRun(teamId, matchupId, runId);
+    this.syncPolling();
   }
 
   runIdMismatch(): boolean {

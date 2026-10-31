@@ -189,7 +189,7 @@ export async function installGraphqlMock(
       };
       const m = input.matchup;
       const regulation =
-        (m as { regulation?: string }).regulation ?? 'regulation-g';
+        (m as { regulation?: string }).regulation ?? 'M-B';
       const opponent = teamNode(
         m.teamToOpponentTeamId.create.id,
         m.teamToOpponentTeamId.create.name,

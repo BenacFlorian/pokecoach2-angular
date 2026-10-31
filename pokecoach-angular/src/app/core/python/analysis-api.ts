@@ -5,6 +5,7 @@ import { catchError, map } from 'rxjs/operators';
 import {
   type AnalysisCapabilitiesResponse,
   type AnalysisCapabilitiesView,
+  type AnalysisContinueRequest,
   type AnalysisStartRequest,
   type AnalysisStartResponse,
   type AnalysisStartResult,
@@ -37,18 +38,18 @@ function validateCapabilitiesBody(body: AnalysisCapabilitiesResponse): AnalysisC
   return mapCapabilitiesView(body);
 }
 
-function validateStartBody(
+function validateCommandBody(
   body: AnalysisStartResponse | null,
   httpStatus: number,
-  expectedMatchupId: string,
+  expectedMatchupId: string | null,
 ): AnalysisStartResult {
   if (!body || (httpStatus !== 200 && httpStatus !== 202)) {
-    throw new AnalysisError('response', 'Réponse de lancement invalide.');
+    throw new AnalysisError('response', 'Réponse de commande invalide.');
   }
   if (!isAnalysisUuid(body.matchupId) || !isAnalysisUuid(body.runId)) {
     throw new AnalysisError('response', 'Identifiants de run invalides.');
   }
-  if (body.matchupId !== expectedMatchupId) {
+  if (expectedMatchupId && body.matchupId !== expectedMatchupId) {
     throw new AnalysisError(
       'response',
       'La réponse ne correspond pas au matchup demandé.',
@@ -113,11 +114,69 @@ export class AnalysisApi {
       )
       .pipe(
         map((res: HttpResponse<AnalysisStartResponse>) =>
-          validateStartBody(res.body, res.status, matchupId),
+          validateCommandBody(res.body, res.status, matchupId),
         ),
         catchError((err: unknown) =>
           throwError(() =>
             err instanceof AnalysisError ? err : mapHttpAnalysisError(err, 'start'),
+          ),
+        ),
+      );
+  }
+
+  continue(
+    runId: string,
+    request: AnalysisContinueRequest,
+    idempotencyKey: string,
+  ): Observable<AnalysisStartResult> {
+    if (!isAnalysisUuid(runId) || !isAnalysisUuid(idempotencyKey)) {
+      return throwError(
+        () => new AnalysisError('validation', 'Identifiants invalides.'),
+      );
+    }
+    return this.http
+      .post<AnalysisStartResponse>(
+        `/api-python/analyses/${runId}/continue`,
+        request,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          observe: 'response',
+        },
+      )
+      .pipe(
+        map((res: HttpResponse<AnalysisStartResponse>) =>
+          validateCommandBody(res.body, res.status, null),
+        ),
+        catchError((err: unknown) =>
+          throwError(() =>
+            err instanceof AnalysisError ? err : mapHttpAnalysisError(err, 'continue'),
+          ),
+        ),
+      );
+  }
+
+  cancel(runId: string, idempotencyKey: string): Observable<AnalysisStartResult> {
+    if (!isAnalysisUuid(runId) || !isAnalysisUuid(idempotencyKey)) {
+      return throwError(
+        () => new AnalysisError('validation', 'Identifiants invalides.'),
+      );
+    }
+    return this.http
+      .post<AnalysisStartResponse>(
+        `/api-python/analyses/${runId}/cancel`,
+        null,
+        {
+          headers: { 'Idempotency-Key': idempotencyKey },
+          observe: 'response',
+        },
+      )
+      .pipe(
+        map((res: HttpResponse<AnalysisStartResponse>) =>
+          validateCommandBody(res.body, res.status, null),
+        ),
+        catchError((err: unknown) =>
+          throwError(() =>
+            err instanceof AnalysisError ? err : mapHttpAnalysisError(err, 'cancel'),
           ),
         ),
       );

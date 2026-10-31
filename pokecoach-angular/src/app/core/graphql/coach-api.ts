@@ -18,6 +18,7 @@ import {
   GET_RUN,
   LIST_MATCHUPS,
   LIST_OWNED_TEAMS,
+  UPDATE_MATCHUP_REGULATION,
 } from './coach-operations';
 import { GraphqlClient } from './graphql-client';
 import {
@@ -157,6 +158,32 @@ export class CoachApi {
             throw new Error('Réponse matchup invalide.');
           }
           return mapped;
+        }),
+      );
+  }
+
+  updateMatchupRegulation(
+    matchupId: string,
+    regulation: string,
+  ): Observable<string> {
+    return this.gql
+      .execute<{ updateMatchup: { matchup: { id: string; regulation: string | null } | null } }>(
+        'UpdateMatchupRegulation',
+        UPDATE_MATCHUP_REGULATION,
+        {
+          input: {
+            id: matchupId,
+            patch: { regulation },
+          },
+        },
+      )
+      .pipe(
+        map((data) => {
+          const reg = data.updateMatchup?.matchup?.regulation;
+          if (!reg) {
+            throw new Error('Format non enregistré.');
+          }
+          return reg;
         }),
       );
   }

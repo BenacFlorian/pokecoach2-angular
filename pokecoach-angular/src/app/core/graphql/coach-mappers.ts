@@ -31,6 +31,7 @@ export interface RunSummary {
   source: string | null;
   createdAt: string;
   finishedAt: string | null;
+  targetPhase: string | null;
 }
 
 export interface RunResult {
@@ -146,6 +147,7 @@ export function mapRunSummary(node: GqlRunNode | null | undefined): RunSummary |
     source: node.source,
     createdAt: node.createdAt,
     finishedAt: node.finishedAt,
+    targetPhase: node.targetPhase ?? null,
   };
 }
 
@@ -582,7 +584,8 @@ export function activeRunStatusMessage(run: RunSummary | null): string | null {
     return 'Analyse annulée';
   }
   if (run.status === 'paused') {
-    return 'Analyse en pause — résultats partiels consultables';
+    const phase = run.targetPhase ?? 'A';
+    return `En pause après ${phase} — résultats partiels consultables`;
   }
   if (run.status === 'failed' || run.processStatus === 'ERROR') {
     return 'La dernière analyse a échoué.';

@@ -18,13 +18,13 @@ export const RUN_SUMMARY_FIELDS = `
   source
   createdAt
   finishedAt
+  targetPhase
 `;
 
 export const RUN_PROGRESS_FIELDS = `
   partialResult
   resultRevision
   progress
-  targetPhase
   executionMetadata
 `;
 
@@ -165,6 +165,17 @@ export const CREATE_OPPONENT_MATCHUP = `
             ${RUN_SUMMARY_FIELDS}
           }
         }
+      }
+    }
+  }
+`;
+
+export const UPDATE_MATCHUP_REGULATION = `
+  mutation UpdateMatchupRegulation($input: UpdateMatchupInput!) {
+    updateMatchup(input: $input) {
+      matchup {
+        id
+        regulation
       }
     }
   }

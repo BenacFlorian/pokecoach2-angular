@@ -23,6 +23,10 @@ export interface AnalysisStartRequest {
   profile: AnalysisProfile;
 }
 
+export interface AnalysisContinueRequest {
+  targetPhase: string;
+}
+
 export interface AnalysisStartResponse {
   matchupId: string;
   runId: string;
@@ -60,10 +64,14 @@ export function mapCapabilitiesView(
   const profiles = body.profiles.filter(
     (p): p is AnalysisProfile => p === 'standard' || p === 'smoke',
   );
+  const phases = [...body.phases];
+  const defaultTargetPhase = phases.includes('synthesis')
+    ? 'synthesis'
+    : highestDeployedPhase(phases);
   return {
-    phases: [...body.phases],
+    phases,
     profiles,
     regulations: [...body.regulations],
-    defaultTargetPhase: highestDeployedPhase(body.phases),
+    defaultTargetPhase,
   };
 }

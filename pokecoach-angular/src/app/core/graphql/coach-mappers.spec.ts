@@ -199,6 +199,7 @@ describe('run status helpers', () => {
         source: 'simulation',
         createdAt: '',
         finishedAt: null,
+        targetPhase: 'A',
       }),
     ).toBe(false);
     expect(
@@ -209,6 +210,7 @@ describe('run status helpers', () => {
         source: 'simulation',
         createdAt: '',
         finishedAt: null,
+        targetPhase: 'A',
       }),
     ).toBe(true);
   });
@@ -221,8 +223,10 @@ describe('run status helpers', () => {
       source: 'simulation',
       createdAt: '',
       finishedAt: null,
+      targetPhase: 'A',
     });
     expect(msg).toContain('pause');
+    expect(msg).toContain('A');
   });
 
   it('labels simulation provenance', () => {

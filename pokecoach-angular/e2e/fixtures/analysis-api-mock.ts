@@ -18,7 +18,7 @@ export async function installAnalysisApiMock(
       body: JSON.stringify({
         phases: ['A'],
         profiles: ['standard', 'smoke'],
-        regulations: ['regulation-g'],
+        regulations: ['M-B'],
       }),
     });
   });
