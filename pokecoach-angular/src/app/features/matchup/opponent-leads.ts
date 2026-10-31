@@ -21,23 +21,32 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
 export class OpponentLeads {
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
-  readonly leads = input.required<readonly OpponentLeadStats[]>();
+  readonly leads = input<readonly OpponentLeadStats[] | null>(null);
+  readonly turn1Pending = input(false);
 
   readonly selectedLeadId = input.required<string>();
   readonly selectedLeadIdChange = output<string>();
 
-  readonly sortedLeads = computed(() =>
-    [...this.leads()].sort((a, b) => {
+  readonly sortedLeads = computed(() => {
+    const list = this.leads();
+    if (!list) {
+      return [];
+    }
+    return [...list].sort((a, b) => {
       if (b.phaseACount !== a.phaseACount) {
         return b.phaseACount - a.phaseACount;
       }
       return a.id.localeCompare(b.id);
-    }),
-  );
+    });
+  });
 
-  readonly activeLead = computed(() =>
-    this.leads().find((l) => l.id === this.selectedLeadId()),
-  );
+  readonly activeLead = computed(() => {
+    const list = this.leads();
+    if (!list) {
+      return undefined;
+    }
+    return list.find((l) => l.id === this.selectedLeadId());
+  });
 
   readonly sortedJointActions = computed(() => {
     const lead = this.activeLead();

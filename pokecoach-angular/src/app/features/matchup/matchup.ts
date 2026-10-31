@@ -12,8 +12,16 @@ import {
   activeRunStatusMessage,
   reportProvenanceLabel,
   shouldPollRun,
+  type RunResult,
+  type SelectedRunView,
 } from '../../core/graphql/coach-mappers';
-import type { RunResult } from '../../core/graphql/coach-mappers';
+import type {
+  GameplanReport,
+  LeadRecommendation,
+  OpponentLeadStats,
+  SelectionResult,
+} from '../../core/models/matchup.model';
+import type { Team } from '../../core/models/team.model';
 import { GameplanTab } from './gameplan';
 import { LeadPick } from './lead-pick';
 import { OpponentLeads } from './opponent-leads';
@@ -41,6 +49,7 @@ export class Matchup {
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private lastLoadedKey = '';
+  private lastRunKey = '';
 
   constructor() {
     effect(() => {
@@ -49,6 +58,7 @@ export class Matchup {
       const key = `${teamId}:${matchupId}`;
       if (key !== this.lastLoadedKey) {
         this.lastLoadedKey = key;
+        this.lastRunKey = '';
         this.activeTab.set('opponent-leads');
         this.selectedLeadId.set('');
       }
@@ -56,19 +66,36 @@ export class Matchup {
     });
 
     effect(() => {
+      const teamId = this.teamId();
+      const matchupId = this.matchupId();
+      const detail = this.store.matchupDetail();
+      if (!detail) {
+        return;
+      }
+      const run = this.selectedRunSummary();
+      if (!run) {
+        return;
+      }
+      const runKey = `${teamId}:${matchupId}:${run.id}`;
+      if (runKey === this.lastRunKey) {
+        return;
+      }
+      this.lastRunKey = runKey;
+      this.store.loadRun(teamId, matchupId, run.id);
+    });
+
+    effect(() => {
       this.store.matchupDetail();
-      this.store.matchupDetailState();
+      this.store.selectedRun();
       this.syncPolling();
     });
 
     effect(() => {
-      const result = this.runResult();
-      if (!result) {
+      const leads = this.opponentLeadsForTabs();
+      if (!leads?.length) {
         return;
       }
-      const sorted = [...result.report.opponentLeads].sort(
-        (a, b) => b.phaseACount - a.phaseACount,
-      );
+      const sorted = [...leads].sort((a, b) => b.phaseACount - a.phaseACount);
       const current = this.selectedLeadId();
       if (!current || !sorted.some((l) => l.id === current)) {
         this.selectedLeadId.set(sorted[0]?.id ?? '');
@@ -93,6 +120,10 @@ export class Matchup {
     const teamId = this.teamId();
     const matchupId = this.matchupId();
     this.store.refreshMatchup(teamId, matchupId);
+    const run = this.selectedRunSummary();
+    if (run) {
+      this.store.refreshRun(teamId, matchupId, run.id);
+    }
     this.syncPolling();
   };
 
@@ -100,24 +131,130 @@ export class Matchup {
     return this.store.matchupDetail();
   }
 
-  runResult(): RunResult | null {
-    const detail = this.store.matchupDetail();
-    if (!detail || detail.successfulResult.kind !== 'valid') {
+  selectedRunView(): SelectedRunView | null {
+    const state = this.store.selectedRunState();
+    if (state === 'idle' || state === 'loading') {
       return null;
     }
-    return detail.successfulResult.result;
+    return this.store.selectedRun();
   }
 
-  bannerOurTeam() {
+  runResult(): RunResult | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'mock') {
+      return view.result;
+    }
+    const detail = this.store.matchupDetail();
+    if (!this.runId()?.trim() && detail?.successfulResult.kind === 'valid') {
+      return detail.successfulResult.result;
+    }
+    return null;
+  }
+
+  showTabs(): boolean {
+    const view = this.selectedRunView();
+    if (view?.kind === 'mock' || view?.kind === 'simulation') {
+      return true;
+    }
+    return this.runResult() !== null;
+  }
+
+  bannerOurTeam(): Team | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'mock') {
+      return view.result.ourTeamSnapshot;
+    }
+    if (view?.kind === 'simulation') {
+      return view.view.ourTeamSnapshot;
+    }
     const result = this.runResult();
     const detail = this.store.matchupDetail();
     return result?.ourTeamSnapshot ?? detail?.ourTeam ?? null;
   }
 
-  bannerOpponentTeam() {
+  bannerOpponentTeam(): Team | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'mock') {
+      return view.result.opponentTeamSnapshot;
+    }
+    if (view?.kind === 'simulation') {
+      return view.view.opponentTeamSnapshot;
+    }
     const result = this.runResult();
     const detail = this.store.matchupDetail();
     return result?.opponentTeamSnapshot ?? detail?.opponentTeam ?? null;
+  }
+
+  opponentLeadsForTabs(): readonly OpponentLeadStats[] | null | undefined {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.opponentLeads;
+    }
+    const result = this.runResult();
+    return result?.report.opponentLeads;
+  }
+
+  turn1Pending(): boolean {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.turn1Pending;
+    }
+    return false;
+  }
+
+  leadRecommendationForTab(): LeadRecommendation | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.leadRecommendation;
+    }
+    return this.runResult()?.report.leadRecommendation ?? null;
+  }
+
+  selectionsForTab(): readonly SelectionResult[] | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.selectionComparisons;
+    }
+    return this.runResult()?.report.selectionComparisons ?? null;
+  }
+
+  gameplanForTab(): GameplanReport | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.gameplan;
+    }
+    return this.runResult()?.report.gameplan ?? null;
+  }
+
+  studiedLeadIds(): string[] {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return [...view.view.tabDisplay.studiedLeadIds];
+    }
+    return (
+      this.runResult()?.report.leadRecommendation.studiedLeads.map(
+        (s) => s.opponentLeadId,
+      ) ?? []
+    );
+  }
+
+  progressHint(): string | null {
+    const view = this.selectedRunView();
+    if (view?.kind !== 'simulation') {
+      return null;
+    }
+    const { progress, partialResult, resultRevision, targetPhase } = view.view;
+    const phases = partialResult.completedPhases.join(', ') || '—';
+    const partial =
+      partialResult.completedPhases.length < 5 ? ' (partiel)' : '';
+    let line = `Phases : ${phases}${partial} · révision ${resultRevision}`;
+    if (targetPhase) {
+      line += ` · cible ${targetPhase}`;
+    }
+    if (progress) {
+      line += ` · ${progress.phase} ${progress.completed}/${progress.total}`;
+    }
+    return line;
   }
 
   latestRunMessage(): string | null {
@@ -125,15 +262,13 @@ export class Matchup {
     if (!detail) {
       return null;
     }
-    const run = this.selectedRun();
+    const run = this.selectedRunSummary();
     if (this.runIdMismatch()) {
       return 'Run introuvable pour ce matchup.';
     }
-    if (this.runResult() && run) {
-      const active = activeRunStatusMessage(run);
-      if (active) {
-        return active;
-      }
+    const view = this.selectedRunView();
+    if (view?.kind === 'incompatible') {
+      return view.message;
     }
     if (!run) {
       return 'Matchup enregistré — aucune analyse disponible';
@@ -143,19 +278,38 @@ export class Matchup {
 
   incompatibleMessage(): string | null {
     const detail = this.store.matchupDetail();
-    if (!detail || detail.successfulResult.kind !== 'incompatible') {
+    if (!detail) {
       return null;
     }
-    return detail.successfulResult.message;
+    if (!this.runId()?.trim() && detail.successfulResult.kind === 'incompatible') {
+      return detail.successfulResult.message;
+    }
+    const view = this.selectedRunView();
+    if (view?.kind === 'incompatible') {
+      return view.message;
+    }
+    return null;
   }
 
   provenanceLabel(): string | null {
-    const result = this.runResult();
-    return reportProvenanceLabel(result?.summary.source ?? null);
+    const view = this.selectedRunView();
+    if (view?.kind === 'mock') {
+      return reportProvenanceLabel(view.result.summary.source);
+    }
+    if (view?.kind === 'simulation') {
+      return reportProvenanceLabel(view.view.summary.source);
+    }
+    return reportProvenanceLabel(this.runResult()?.summary.source ?? null);
   }
 
   refresh(): void {
-    this.store.refreshMatchup(this.teamId(), this.matchupId());
+    const teamId = this.teamId();
+    const matchupId = this.matchupId();
+    this.store.refreshMatchup(teamId, matchupId);
+    const run = this.selectedRunSummary();
+    if (run) {
+      this.store.refreshRun(teamId, matchupId, run.id);
+    }
     this.syncPolling();
   }
 
@@ -184,32 +338,27 @@ export class Matchup {
     }
   }
 
-  studiedLeadIds(): string[] {
-    return (
-      this.runResult()?.report.leadRecommendation.studiedLeads.map(
-        (s) => s.opponentLeadId,
-      ) ?? []
-    );
-  }
-
   private syncPolling(): void {
     this.stopPolling();
     if (typeof document !== 'undefined' && document.hidden) {
       return;
     }
-    const detail = this.store.matchupDetail();
-    const run = this.selectedRun();
-    if (!detail || !shouldPollRun(run)) {
+    const run = this.selectedRunSummary();
+    if (!shouldPollRun(run)) {
       return;
     }
     const teamId = this.teamId();
     const matchupId = this.matchupId();
+    if (!run) {
+      return;
+    }
     this.pollTimer = setInterval(() => {
+      this.store.refreshRun(teamId, matchupId, run.id);
       this.store.refreshMatchup(teamId, matchupId);
     }, 5000);
   }
 
-  selectedRun() {
+  selectedRunSummary() {
     const detail = this.store.matchupDetail();
     if (!detail) {
       return null;
@@ -231,6 +380,13 @@ export class Matchup {
       return false;
     }
     return !detail.runs.some((r) => r.id === param);
+  }
+
+  initialPageLoading(): boolean {
+    return (
+      this.store.matchupDetailState() === 'loading' &&
+      this.store.matchupDetail() === null
+    );
   }
 
   private stopPolling(): void {

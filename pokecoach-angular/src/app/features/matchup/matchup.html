@@ -1,9 +1,9 @@
 @let detail = store.matchupDetail();
 @let ours = bannerOurTeam();
 @let opponent = bannerOpponentTeam();
-@let result = runResult();
+@let leads = opponentLeadsForTabs();
 <div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
-  @if (store.matchupDetailState() === 'loading') {
+  @if (initialPageLoading()) {
     <div class="tw:skeleton tw:h-32 tw:w-full tw:rounded-box"></div>
   } @else if (store.matchupDetailState() === 'error') {
     <div class="tw:alert tw:alert-error" role="alert">
@@ -57,6 +57,9 @@
     @if (latestRunMessage(); as statusMsg) {
       <p class="tw:text-sm tw:text-base-content/80 tw:m-0" role="status">{{ statusMsg }}</p>
     }
+    @if (progressHint(); as hint) {
+      <p class="tw:text-xs tw:text-base-content/60 tw:m-0" role="status">{{ hint }}</p>
+    }
     @if (incompatibleMessage(); as bad) {
       <div class="tw:alert tw:alert-warning" role="alert">{{ bad }}</div>
     }
@@ -64,7 +67,7 @@
       <span class="tw:badge tw:badge-warning tw:w-fit">{{ prov }}</span>
     }
 
-    @if (result) {
+    @if (showTabs()) {
       <div
         role="tablist"
         aria-label="Analyse du matchup"
@@ -119,9 +122,10 @@
             class="tw:w-full"
           >
             <app-opponent-leads
-              [ourTeam]="result.ourTeamSnapshot"
-              [opponentTeam]="result.opponentTeamSnapshot"
-              [leads]="result.report.opponentLeads"
+              [ourTeam]="ours"
+              [opponentTeam]="opponent"
+              [leads]="leads ?? null"
+              [turn1Pending]="turn1Pending()"
               [selectedLeadId]="selectedLeadId()"
               (selectedLeadIdChange)="selectedLeadId.set($event)"
             />
@@ -135,11 +139,11 @@
             class="tw:w-full"
           >
             <app-lead-pick
-              [ourTeam]="result.ourTeamSnapshot"
-              [opponentTeam]="result.opponentTeamSnapshot"
-              [opponentLeads]="result.report.opponentLeads"
-              [recommendation]="result.report.leadRecommendation"
-              [selections]="result.report.selectionComparisons"
+              [ourTeam]="ours"
+              [opponentTeam]="opponent"
+              [opponentLeads]="leads ?? null"
+              [recommendation]="leadRecommendationForTab()"
+              [selections]="selectionsForTab()"
               [studiedLeadIds]="studiedLeadIds()"
               [provenanceNote]="provenanceLabel()"
             />
@@ -153,9 +157,9 @@
             class="tw:w-full"
           >
             <app-gameplan-tab
-              [ourTeam]="result.ourTeamSnapshot"
-              [opponentTeam]="result.opponentTeamSnapshot"
-              [gameplan]="result.report.gameplan"
+              [ourTeam]="ours"
+              [opponentTeam]="opponent"
+              [gameplan]="gameplanForTab()"
             />
           </div>
         }

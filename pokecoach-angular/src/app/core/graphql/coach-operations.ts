@@ -20,12 +20,21 @@ export const RUN_SUMMARY_FIELDS = `
   finishedAt
 `;
 
+export const RUN_PROGRESS_FIELDS = `
+  partialResult
+  resultRevision
+  progress
+  targetPhase
+  executionMetadata
+`;
+
 export const RUN_DETAIL_FIELDS = `
   ${RUN_SUMMARY_FIELDS}
   reportVersion
   report
   ourTeamSnapshot
   opponentTeamSnapshot
+  ${RUN_PROGRESS_FIELDS}
 `;
 
 export const LIST_OWNED_TEAMS = `
@@ -107,11 +116,21 @@ export const GET_MATCHUP = `
       matchupRuns(first: 20, orderBy: [CREATED_AT_DESC, ID_DESC]) {
         nodes {
           ${RUN_SUMMARY_FIELDS}
+          ${RUN_PROGRESS_FIELDS}
         }
       }
       latestSuccessfulRun {
         ${RUN_DETAIL_FIELDS}
       }
+    }
+  }
+`;
+
+export const GET_RUN = `
+  query GetRun($runId: UUID!) {
+    matchupRun(id: $runId) {
+      matchupId
+      ${RUN_DETAIL_FIELDS}
     }
   }
 `;

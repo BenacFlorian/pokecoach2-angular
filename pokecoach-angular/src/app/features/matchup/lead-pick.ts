@@ -20,9 +20,9 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
 export class LeadPick {
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
-  readonly opponentLeads = input.required<readonly OpponentLeadStats[]>();
-  readonly recommendation = input.required<LeadRecommendation>();
-  readonly selections = input.required<readonly SelectionResult[]>();
+  readonly opponentLeads = input<readonly OpponentLeadStats[] | null>(null);
+  readonly recommendation = input<LeadRecommendation | null>(null);
+  readonly selections = input<readonly SelectionResult[] | null>(null);
   readonly studiedLeadIds = input.required<readonly string[]>();
   readonly provenanceNote = input<string | null>(null);
 
@@ -34,15 +34,23 @@ export class LeadPick {
   }
 
   leadLabel(leadId: string): string {
+    const leads = this.opponentLeads();
+    if (!leads) {
+      return leadId;
+    }
     return opponentLeadLabelById(
       this.opponentTeam(),
-      this.opponentLeads(),
+      leads,
       leadId,
     );
   }
 
   isStudied(leadId: string): boolean {
-    return this.recommendation().studiedLeads.some(
+    const rec = this.recommendation();
+    if (!rec) {
+      return false;
+    }
+    return rec.studiedLeads.some(
       (s) => s.opponentLeadId === leadId,
     );
   }

@@ -1,4 +1,4 @@
-@let plan = gameplan();
+@if (gameplan(); as plan) {
 <section
   class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:items-start"
 >
@@ -57,3 +57,6 @@
     <p class="tw:text-sm tw:text-base-content/70 tw:m-0">{{ plan.sampleLimitation }}</p>
   </div>
 </section>
+} @else {
+  <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+}

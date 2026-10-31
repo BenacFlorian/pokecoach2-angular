@@ -1,6 +1,9 @@
 <div
   class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:items-start"
 >
+  @if (leads() === null) {
+    <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+  } @else {
   <div class="tw:flex tw:flex-col tw:gap-2">
     <h3 class="tw:m-0" i18n="@@opponentLeads.listTitle">Leads adverses</h3>
     <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
@@ -28,6 +31,9 @@
 
   @if (activeLead(); as active) {
     <div class="tw:flex tw:flex-col tw:gap-4">
+      @if (turn1Pending()) {
+        <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+      } @else {
       <section class="tw:flex tw:flex-col tw:gap-2">
         <h3 class="tw:m-0" i18n="@@opponentLeads.turn1Title">Actions conjointes tour 1</h3>
         <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
@@ -69,6 +75,8 @@
           </ul>
         </details>
       }
+      }
     </div>
+  }
   }
 </div>

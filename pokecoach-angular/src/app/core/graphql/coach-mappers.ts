@@ -1,7 +1,10 @@
 import type { MatchupReport } from '../models/matchup.model';
+import type { RunProgressJson, SimulationResultV2 } from '../models/simulation-result.model';
 import type { PokemonSet, PokemonSlot, Team, TeamSource } from '../models/team.model';
 import { pokemonTuple } from '../models/team.model';
-import type { GqlRunNode, GqlTeamNode } from './coach-dto';
+import { mapSimulationV2ToTabDisplay, type SimulationTabDisplay } from '../matchup/simulation-v2-display';
+import { validateSimulationResult } from './simulation-result-validator';
+import type { GqlRunDetailNode, GqlRunNode, GqlTeamNode } from './coach-dto';
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -9,6 +12,7 @@ const UUID_RE =
 export type RunStatus =
   | 'queued'
   | 'running'
+  | 'paused'
   | 'succeeded'
   | 'failed'
   | 'cancelled';
@@ -36,6 +40,31 @@ export interface RunResult {
   ourTeamSnapshot: Team;
   opponentTeamSnapshot: Team;
 }
+
+export interface RunProgress {
+  phase: string;
+  completed: number;
+  total: number;
+}
+
+export interface SimulationRunView {
+  summary: RunSummary;
+  reportVersion: 2;
+  partialResult: SimulationResultV2;
+  resultRevision: number;
+  progress: RunProgress | null;
+  targetPhase: string | null;
+  executionMetadata: unknown;
+  ourTeamSnapshot: Team;
+  opponentTeamSnapshot: Team;
+  tabDisplay: SimulationTabDisplay;
+}
+
+export type SelectedRunView =
+  | { kind: 'absent' }
+  | { kind: 'mock'; result: RunResult }
+  | { kind: 'simulation'; view: SimulationRunView }
+  | { kind: 'incompatible'; message: string; summary: RunSummary | null };
 
 export interface MatchupSummary {
   id: string;
@@ -78,6 +107,7 @@ export function mapRunStatus(raw: string): RunStatus | null {
   switch (raw) {
     case 'queued':
     case 'running':
+    case 'paused':
     case 'succeeded':
     case 'failed':
     case 'cancelled':
@@ -443,7 +473,105 @@ export function reportProvenanceLabel(source: string | null): string | null {
   if (source === 'mock') {
     return 'Rapport de démonstration enregistré';
   }
+  if (source === 'simulation') {
+    return 'Rapport issu de simulation';
+  }
   return null;
+}
+
+export function mapRunProgress(raw: unknown): RunProgress | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return null;
+  }
+  const obj = raw as RunProgressJson;
+  if (
+    typeof obj.phase !== 'string' ||
+    typeof obj.completed !== 'number' ||
+    typeof obj.total !== 'number' ||
+    obj.completed < 0 ||
+    obj.total < 0 ||
+    obj.completed > obj.total
+  ) {
+    return null;
+  }
+  return { phase: obj.phase, completed: obj.completed, total: obj.total };
+}
+
+export function mapSimulationRunView(
+  node: GqlRunDetailNode | null | undefined,
+  expectedMatchupId: string,
+): SelectedRunView {
+  if (!node) {
+    return { kind: 'absent' };
+  }
+  if (!isUuid(node.matchupId) || node.matchupId !== expectedMatchupId) {
+    return {
+      kind: 'incompatible',
+      message: 'Ce run n’appartient pas à ce matchup.',
+      summary: mapRunSummary(node),
+    };
+  }
+  const summary = mapRunSummary(node);
+  if (!summary) {
+    return { kind: 'incompatible', message: 'Run illisible.', summary: null };
+  }
+
+  if (node.source === 'mock' && node.reportVersion === 1 && summary.status === 'succeeded') {
+    const report = validateMockReportV1(node.report);
+    const ourTeamSnapshot = mapTeamSnapshotJson(node.ourTeamSnapshot);
+    const opponentTeamSnapshot = mapTeamSnapshotJson(node.opponentTeamSnapshot);
+    if (!report || !ourTeamSnapshot || !opponentTeamSnapshot) {
+      return { kind: 'incompatible', message: 'Rapport enregistré illisible.', summary };
+    }
+    return {
+      kind: 'mock',
+      result: {
+        summary,
+        reportVersion: node.reportVersion,
+        report,
+        ourTeamSnapshot,
+        opponentTeamSnapshot,
+      },
+    };
+  }
+
+  if (node.source === 'simulation' && node.reportVersion === 2) {
+    const validated = validateSimulationResult(node.partialResult ?? node.report);
+    const ourTeamSnapshot = mapTeamSnapshotJson(node.ourTeamSnapshot);
+    const opponentTeamSnapshot = mapTeamSnapshotJson(node.opponentTeamSnapshot);
+    if (!validated.ok || !ourTeamSnapshot || !opponentTeamSnapshot) {
+      return {
+        kind: 'incompatible',
+        message: 'Format de rapport non pris en charge pour le moment.',
+        summary,
+      };
+    }
+    const revision =
+      typeof node.resultRevision === 'number' && node.resultRevision >= 0
+        ? node.resultRevision
+        : 0;
+    return {
+      kind: 'simulation',
+      view: {
+        summary,
+        reportVersion: 2,
+        partialResult: validated.value,
+        resultRevision: revision,
+        progress: mapRunProgress(node.progress),
+        targetPhase: node.targetPhase ?? null,
+        executionMetadata: node.executionMetadata ?? {},
+        ourTeamSnapshot,
+        opponentTeamSnapshot,
+        tabDisplay: mapSimulationV2ToTabDisplay(validated.value),
+      },
+    };
+  }
+
+  return {
+    kind: 'incompatible',
+    message: 'Format de rapport non pris en charge pour le moment.',
+    summary,
+  };
 }
 
 export function activeRunStatusMessage(run: RunSummary | null): string | null {
@@ -452,6 +580,9 @@ export function activeRunStatusMessage(run: RunSummary | null): string | null {
   }
   if (run.status === 'cancelled') {
     return 'Analyse annulée';
+  }
+  if (run.status === 'paused') {
+    return 'Analyse en pause — résultats partiels consultables';
   }
   if (run.status === 'failed' || run.processStatus === 'ERROR') {
     return 'La dernière analyse a échoué.';
@@ -476,9 +607,6 @@ export function activeRunStatusMessage(run: RunSummary | null): string | null {
 
 export function shouldPollRun(run: RunSummary | null): boolean {
   if (!run) {
-    return false;
-  }
-  if (run.status === 'cancelled' || run.status === 'failed' || run.status === 'succeeded') {
     return false;
   }
   return run.status === 'queued' || run.status === 'running';

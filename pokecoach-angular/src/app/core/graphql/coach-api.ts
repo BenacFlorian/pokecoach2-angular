@@ -6,6 +6,7 @@ import type {
   GqlCreateTeamPayload,
   GqlMatchupById,
   GqlMatchupsConnection,
+  GqlRunById,
   GqlTeamById,
   GqlTeamsConnection,
 } from './coach-dto';
@@ -14,6 +15,7 @@ import {
   CREATE_OWNED_TEAM,
   GET_MATCHUP,
   GET_OWNED_TEAM,
+  GET_RUN,
   LIST_MATCHUPS,
   LIST_OWNED_TEAMS,
 } from './coach-operations';
@@ -21,11 +23,13 @@ import { GraphqlClient } from './graphql-client';
 import {
   mapMatchupDetail,
   mapMatchupSummary,
+  mapSimulationRunView,
   mapTeamNode,
   teamInputFromImported,
   type MatchupDetail,
   type MatchupSummary,
   type Page,
+  type SelectedRunView,
 } from './coach-mappers';
 
 @Injectable({ providedIn: 'root' })
@@ -83,6 +87,16 @@ export class CoachApi {
     return this.gql
       .execute<GqlMatchupById>('GetMatchup', GET_MATCHUP, { matchupId })
       .pipe(map((data) => (data.matchup ? mapMatchupDetail(data.matchup, teamId) : null)));
+  }
+
+  getRun(
+    teamId: string,
+    matchupId: string,
+    runId: string,
+  ): Observable<SelectedRunView> {
+    return this.gql.execute<GqlRunById>('GetRun', GET_RUN, { runId }).pipe(
+      map((data) => mapSimulationRunView(data.matchupRun, matchupId)),
+    );
   }
 
   createOwnedTeam(

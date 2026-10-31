@@ -27,6 +27,19 @@ export interface GqlRunNode {
   opponentTeamSnapshot: unknown;
   createdAt: string;
   finishedAt: string | null;
+  partialResult?: unknown;
+  resultRevision?: number | null;
+  progress?: unknown;
+  targetPhase?: string | null;
+  executionMetadata?: unknown;
+}
+
+export interface GqlRunDetailNode extends GqlRunNode {
+  matchupId: string;
+}
+
+export interface GqlRunById {
+  matchupRun: GqlRunDetailNode | null;
 }
 
 export interface GqlMatchupNode {

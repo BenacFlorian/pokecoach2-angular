@@ -3,7 +3,7 @@ import { Subscription } from 'rxjs';
 import type { ImportedTeam, Team } from '../models/team.model';
 import { CoachApi } from '../graphql/coach-api';
 import { userMessageForGraphqlError } from '../graphql/graphql-error';
-import type { MatchupDetail, MatchupSummary, Page } from '../graphql/coach-mappers';
+import type { MatchupDetail, MatchupSummary, Page, SelectedRunView } from '../graphql/coach-mappers';
 import { isUuid } from '../graphql/coach-mappers';
 
 export type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'not-found';
@@ -55,10 +55,16 @@ export class CoachStore {
   private matchupDetailGen = 0;
   private matchupDetailKey = '';
 
+  private selectedRunResource = signal<DetailResource<SelectedRunView>>(emptyDetail());
+  private selectedRunGen = 0;
+  private selectedRunKey = '';
+  private selectedRunRevision = -1;
+
   private teamsSub: Subscription | null = null;
   private teamSub: Subscription | null = null;
   private matchupsSub: Subscription | null = null;
   private matchupSub: Subscription | null = null;
+  private selectedRunSub: Subscription | null = null;
 
   readonly teamsState = computed(() => this.teamsResource().state);
   readonly teams = computed(() => this.teamsResource().items);
@@ -79,6 +85,10 @@ export class CoachStore {
   readonly matchupDetailState = computed(() => this.matchupDetailResource().state);
   readonly matchupDetail = computed(() => this.matchupDetailResource().value);
   readonly matchupDetailError = computed(() => this.matchupDetailResource().error);
+
+  readonly selectedRunState = computed(() => this.selectedRunResource().state);
+  readonly selectedRun = computed(() => this.selectedRunResource().value);
+  readonly selectedRunError = computed(() => this.selectedRunResource().error);
 
   loadTeams(): void {
     const gen = ++this.teamsRequestGen;
@@ -191,7 +201,11 @@ export class CoachStore {
       });
   }
 
-  loadMatchup(teamId: string, matchupId: string): void {
+  loadMatchup(
+    teamId: string,
+    matchupId: string,
+    options: { silent?: boolean } = {},
+  ): void {
     const key = `${teamId}:${matchupId}`;
     if (!isUuid(teamId) || !isUuid(matchupId)) {
       this.matchupDetailResource.set({ state: 'not-found', value: null, error: null });
@@ -200,7 +214,9 @@ export class CoachStore {
     const gen = ++this.matchupDetailGen;
     this.matchupDetailKey = key;
     this.matchupSub?.unsubscribe();
-    this.matchupDetailResource.set({ state: 'loading', value: null, error: null });
+    if (!options.silent) {
+      this.matchupDetailResource.set({ state: 'loading', value: null, error: null });
+    }
     this.matchupSub = this.api.getMatchup(teamId, matchupId).subscribe({
       next: (detail) => {
         if (gen !== this.matchupDetailGen || this.matchupDetailKey !== key) {
@@ -226,7 +242,68 @@ export class CoachStore {
   }
 
   refreshMatchup(teamId: string, matchupId: string): void {
-    this.loadMatchup(teamId, matchupId);
+    this.loadMatchup(teamId, matchupId, { silent: true });
+  }
+
+  loadRun(teamId: string, matchupId: string, runId: string): void {
+    this.fetchRun(teamId, matchupId, runId, { showLoading: true });
+  }
+
+  refreshRun(teamId: string, matchupId: string, runId: string): void {
+    this.fetchRun(teamId, matchupId, runId, { showLoading: false });
+  }
+
+  private fetchRun(
+    teamId: string,
+    matchupId: string,
+    runId: string,
+    options: { showLoading: boolean },
+  ): void {
+    const key = `${teamId}:${matchupId}:${runId}`;
+    if (!isUuid(teamId) || !isUuid(matchupId) || !isUuid(runId)) {
+      this.selectedRunResource.set({ state: 'not-found', value: null, error: null });
+      return;
+    }
+    const gen = ++this.selectedRunGen;
+    this.selectedRunKey = key;
+    this.selectedRunSub?.unsubscribe();
+    if (options.showLoading) {
+      this.selectedRunResource.set({ state: 'loading', value: null, error: null });
+      this.selectedRunRevision = -1;
+    }
+    this.selectedRunSub = this.api.getRun(teamId, matchupId, runId).subscribe({
+      next: (view) => {
+        if (gen !== this.selectedRunGen || this.selectedRunKey !== key) {
+          return;
+        }
+        const revision =
+          view.kind === 'simulation' ? view.view.resultRevision : undefined;
+        if (
+          revision !== undefined &&
+          this.selectedRunRevision >= 0 &&
+          revision < this.selectedRunRevision
+        ) {
+          return;
+        }
+        if (revision !== undefined) {
+          this.selectedRunRevision = revision;
+        }
+        this.selectedRunResource.set({ state: 'ready', value: view, error: null });
+      },
+      error: (err) => {
+        if (gen !== this.selectedRunGen) {
+          return;
+        }
+        if (!options.showLoading && this.selectedRunResource().state === 'ready') {
+          return;
+        }
+        this.selectedRunResource.set({
+          state: 'error',
+          value: null,
+          error: userMessageForGraphqlError(err),
+        });
+      },
+    });
   }
 
   createOwnedTeam(
@@ -331,14 +408,18 @@ export class CoachStore {
     this.teamDetailGen++;
     this.matchupsRequestGen++;
     this.matchupDetailGen++;
+    this.selectedRunGen++;
     this.teamsSub?.unsubscribe();
     this.teamSub?.unsubscribe();
     this.matchupsSub?.unsubscribe();
     this.matchupSub?.unsubscribe();
+    this.selectedRunSub?.unsubscribe();
     this.teamsResource.set(emptyList());
     this.teamDetailResource.set(emptyDetail());
     this.matchupsResource.set(emptyList());
     this.matchupDetailResource.set(emptyDetail());
+    this.selectedRunResource.set(emptyDetail());
+    this.selectedRunRevision = -1;
   }
 
   resetForTests(): void {

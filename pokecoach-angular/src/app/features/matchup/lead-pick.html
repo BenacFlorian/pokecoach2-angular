@@ -1,4 +1,4 @@
-@let rec = recommendation();
+@if (recommendation(); as rec) {
 @let ours = ourTeam();
 <div
   class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:items-start"
@@ -63,18 +63,23 @@
       }
     }
 
-    <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
-      <summary i18n="@@leadPick.compositions">Compositions comparées</summary>
-      <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
-        @for (sel of selections(); track $index) {
-          <li>
-            {{ leadLabel(sel.opponentLeadId) }}
-            @if (winRate(sel); as rate) {
-              — {{ rate }} victoires
-            }
-          </li>
-        }
-      </ul>
-    </details>
+    @if (selections(); as comps) {
+      <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
+        <summary i18n="@@leadPick.compositions">Compositions comparées</summary>
+        <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+          @for (sel of comps; track $index) {
+            <li>
+              {{ leadLabel(sel.opponentLeadId) }}
+              @if (winRate(sel); as rate) {
+                — {{ rate }} victoires
+              }
+            </li>
+          }
+        </ul>
+      </details>
+    }
   </div>
 </div>
+} @else {
+  <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+}
