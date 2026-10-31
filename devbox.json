@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.17.3/.schema/devbox.schema.json",
+  "packages": ["nodejs@22.23.3"],
+  "shell": {
+    "init_hook": ["echo 'Welcome to devbox!' > /dev/null"],
+    "scripts": {
+      "setup": ["npm --prefix pokecoach-angular ci"],
+      "start": ["npm --prefix pokecoach-angular run start"],
+      "build": ["npm --prefix pokecoach-angular run build"],
+      "test": ["npm --prefix pokecoach-angular run test -- --watch=false"]
+    }
+  }
+}

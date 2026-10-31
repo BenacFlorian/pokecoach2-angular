@@ -1,0 +1,35 @@
+@import "tailwindcss" prefix(tw);
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+  logs: false;
+}
+
+@import "./styles/daisyui.css";
+
+/* Global typography scale (design system) */
+@layer base {
+  h1 {
+    @apply tw:text-2xl tw:font-semibold tw:text-base-content;
+  }
+
+  h2 {
+    @apply tw:text-xl tw:font-semibold tw:text-base-content;
+  }
+
+  h3 {
+    @apply tw:text-lg tw:font-medium tw:text-base-content;
+  }
+
+  button,
+  [role="button"],
+  a[href],
+  label[for],
+  select,
+  summary {
+    @apply tw:cursor-pointer;
+  }
+
+  :focus-visible {
+    @apply tw:outline-2 tw:outline-offset-2 tw:outline-primary;
+  }
+}

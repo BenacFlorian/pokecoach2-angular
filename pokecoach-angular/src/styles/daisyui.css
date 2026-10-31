@@ -1,0 +1,27 @@
+@plugin "daisyui/theme" {
+  name: "light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --depth: 0;
+  --noise: 0;
+
+  --color-primary-soft: oklch(52% 0.14 250);
+}
+
+@plugin "daisyui/theme" {
+  name: "dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --depth: 0;
+  --noise: 0;
+
+  --color-primary-soft: oklch(72% 0.12 250);
+}
+
+@theme inline {
+  --color-primary-soft: var(--color-primary-soft);
+}
