@@ -1,5 +1,5 @@
-import { PokepasteParser } from '../import/pokepaste-parser';
-import type { ImportedTeam, Team } from '../models/team.model';
+import { PokepasteParser } from '../../app/core/import/pokepaste-parser';
+import type { ImportedTeam, Team } from '../../app/core/models/team.model';
 
 const parser = new PokepasteParser();
 

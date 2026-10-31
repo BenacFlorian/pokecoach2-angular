@@ -1,6 +1,6 @@
 # pokecoach2-angular
 
-Frontend **pokecoach** (Angular) — parcours accueil → équipe → préparation de matchup avec données fictives.
+Frontend **pokecoach** (Angular) — parcours accueil → équipe → matchup, données servies par PostGraphile.
 
 ## Prérequis
 
@@ -25,7 +25,8 @@ Frontend **pokecoach** (Angular) — parcours accueil → équipe → préparati
 | `devbox run build` | Build de production |
 | `devbox run test` | Tests unitaires (Vitest, sans watch) |
 | `devbox run lint` | ESLint + accessibilité des templates |
-| `devbox run e2e` | Parcours Playwright (démarre `ng serve` si besoin) |
+| `devbox run e2e` | Parcours Playwright avec mock GraphQL |
+| `devbox run -- npm --prefix pokecoach-angular run e2e:live` | Recette live (URL explicite, voir doc intégration) |
 
 Avant le premier `e2e`, installer les navigateurs Playwright :
 
@@ -46,14 +47,18 @@ devbox run -- npm --prefix pokecoach-angular exec playwright install chromium
 
 - **Import** : parsing Showdown local ; URL `pokepast.es` récupérée en HTTP (`/raw`).
 - **Images** : PokéAPI (`/api/v2/pokemon/…`) avec cache et placeholder local.
-- **Analyses** : entièrement fictives (`CoachStore`, `MockMatchupPreparation`, `console.log [mock] prepare-matchup`).
-- **Persistance** : `localStorage` clé `pokecoach.demo.v1` (équipes + matchups). Deux équipes de démo sont injectées si aucune sauvegarde valide.
+- **API métier** : GraphQL PostGraphile (`/graphql`, proxy dev vers `127.0.0.1:4042`). Équipes et matchups persistés en PostgreSQL.
+- **Analyses** : lues depuis `core.matchup_runs` (dernier succès + statut du run le plus récent). Un matchup nouvellement créé n’a pas d’analyse tant qu’un worker backend n’a pas produit de run.
+- **Ancien localStorage** (`pokecoach.demo.v1`) : ignoré par l’application ; non supprimé.
+
+Voir [Intégration PostGraphile](./docs/integration-postgraphile.md).
 
 ## Limites volontaires
 
-Pas de backend Python, LLM, LangGraph ni analyse réelle. Les tests e2e interceptent Poképaste et PokéAPI.
+Pas de moteur Python / LLM dans le navigateur. Les tests e2e mockent GraphQL (suite `coach.spec.ts`) ; la suite `e2e:live` cible une stack réelle.
 
 ## Plans
 
 - [Plan 1 — initialisation](./docs/plans/2026-10-31-01-angular-initialisation.md)
 - [Plan 2 — interface mock](./docs/plans/2026-10-31-02-angular-interface-mock.md)
+- [Plan 3 — PostGraphile](./docs/plans/2026-10-31-03-angular-postgraphile.md)

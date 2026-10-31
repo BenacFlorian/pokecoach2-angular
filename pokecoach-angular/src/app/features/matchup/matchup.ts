@@ -1,6 +1,19 @@
-import { Component, effect, inject, input, signal } from '@angular/core';
+import {
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  input,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { CoachStore } from '../../core/data/coach-store';
+import {
+  activeRunStatusMessage,
+  reportProvenanceLabel,
+  shouldPollRun,
+} from '../../core/graphql/coach-mappers';
+import type { RunResult } from '../../core/graphql/coach-mappers';
 import { GameplanTab } from './gameplan';
 import { LeadPick } from './lead-pick';
 import { OpponentLeads } from './opponent-leads';
@@ -17,31 +30,128 @@ export class Matchup {
   readonly teamId = input.required<string>();
   readonly matchupId = input.required<string>();
 
-  private readonly store = inject(CoachStore);
+  readonly store = inject(CoachStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly activeTab = signal<MatchupTab>('opponent-leads');
   readonly selectedLeadId = signal<string>('');
 
   readonly tabOrder: MatchupTab[] = ['opponent-leads', 'lead-pick', 'gameplan'];
 
-  readonly prepared = () =>
-    this.store.getMatchup(this.teamId(), this.matchupId());
-
-  readonly ourTeam = () => this.store.getTeam(this.teamId());
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private lastLoadedKey = '';
 
   constructor() {
     effect(() => {
-      const m = this.prepared();
-      if (!m) {
+      const teamId = this.teamId();
+      const matchupId = this.matchupId();
+      const key = `${teamId}:${matchupId}`;
+      if (key !== this.lastLoadedKey) {
+        this.lastLoadedKey = key;
+        this.activeTab.set('opponent-leads');
         this.selectedLeadId.set('');
+      }
+      this.store.loadMatchup(teamId, matchupId);
+    });
+
+    effect(() => {
+      this.store.matchupDetail();
+      this.store.matchupDetailState();
+      this.syncPolling();
+    });
+
+    effect(() => {
+      const result = this.runResult();
+      if (!result) {
         return;
       }
-      this.activeTab.set('opponent-leads');
-      const sorted = [...m.report.opponentLeads].sort(
+      const sorted = [...result.report.opponentLeads].sort(
         (a, b) => b.phaseACount - a.phaseACount,
       );
-      this.selectedLeadId.set(sorted[0]?.id ?? '');
+      const current = this.selectedLeadId();
+      if (!current || !sorted.some((l) => l.id === current)) {
+        this.selectedLeadId.set(sorted[0]?.id ?? '');
+      }
     });
+
+    this.destroyRef.onDestroy(() => this.stopPolling());
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', this.onVisibilityChange);
+      this.destroyRef.onDestroy(() =>
+        document.removeEventListener('visibilitychange', this.onVisibilityChange),
+      );
+    }
+  }
+
+  private readonly onVisibilityChange = (): void => {
+    if (document.hidden) {
+      this.stopPolling();
+      return;
+    }
+    const teamId = this.teamId();
+    const matchupId = this.matchupId();
+    this.store.refreshMatchup(teamId, matchupId);
+    this.syncPolling();
+  };
+
+  detail() {
+    return this.store.matchupDetail();
+  }
+
+  runResult(): RunResult | null {
+    const detail = this.store.matchupDetail();
+    if (!detail || detail.successfulResult.kind !== 'valid') {
+      return null;
+    }
+    return detail.successfulResult.result;
+  }
+
+  bannerOurTeam() {
+    const result = this.runResult();
+    const detail = this.store.matchupDetail();
+    return result?.ourTeamSnapshot ?? detail?.ourTeam ?? null;
+  }
+
+  bannerOpponentTeam() {
+    const result = this.runResult();
+    const detail = this.store.matchupDetail();
+    return result?.opponentTeamSnapshot ?? detail?.opponentTeam ?? null;
+  }
+
+  latestRunMessage(): string | null {
+    const detail = this.store.matchupDetail();
+    if (!detail) {
+      return null;
+    }
+    if (this.runResult() && detail.latestRun) {
+      const active = activeRunStatusMessage(detail.latestRun);
+      if (active) {
+        return active;
+      }
+    }
+    if (!detail.latestRun) {
+      return 'Matchup enregistré — aucune analyse disponible';
+    }
+    return activeRunStatusMessage(detail.latestRun);
+  }
+
+  incompatibleMessage(): string | null {
+    const detail = this.store.matchupDetail();
+    if (!detail || detail.successfulResult.kind !== 'incompatible') {
+      return null;
+    }
+    return detail.successfulResult.message;
+  }
+
+  provenanceLabel(): string | null {
+    const result = this.runResult();
+    return reportProvenanceLabel(result?.summary.source ?? null);
+  }
+
+  refresh(): void {
+    this.store.refreshMatchup(this.teamId(), this.matchupId());
+    this.syncPolling();
   }
 
   setTab(tab: MatchupTab, event?: Event): void {
@@ -71,9 +181,32 @@ export class Matchup {
 
   studiedLeadIds(): string[] {
     return (
-      this.prepared()?.report.leadRecommendation.studiedLeads.map(
+      this.runResult()?.report.leadRecommendation.studiedLeads.map(
         (s) => s.opponentLeadId,
       ) ?? []
     );
+  }
+
+  private syncPolling(): void {
+    this.stopPolling();
+    if (typeof document !== 'undefined' && document.hidden) {
+      return;
+    }
+    const detail = this.store.matchupDetail();
+    if (!detail || !shouldPollRun(detail.latestRun)) {
+      return;
+    }
+    const teamId = this.teamId();
+    const matchupId = this.matchupId();
+    this.pollTimer = setInterval(() => {
+      this.store.refreshMatchup(teamId, matchupId);
+    }, 5000);
+  }
+
+  private stopPolling(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
   }
 }

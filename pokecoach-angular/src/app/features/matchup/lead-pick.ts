@@ -24,6 +24,7 @@ export class LeadPick {
   readonly recommendation = input.required<LeadRecommendation>();
   readonly selections = input.required<readonly SelectionResult[]>();
   readonly studiedLeadIds = input.required<readonly string[]>();
+  readonly provenanceNote = input<string | null>(null);
 
   winRate(result: SelectionResult): string | null {
     if (result.sampleSize === 0) {

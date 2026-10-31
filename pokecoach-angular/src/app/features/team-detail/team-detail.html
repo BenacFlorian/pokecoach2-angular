@@ -1,6 +1,15 @@
-@let current = team();
+@let current = store.teamDetail();
 <div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
-  @if (!current) {
+  @if (store.teamDetailState() === 'loading') {
+    <div class="tw:skeleton tw:h-16 tw:w-full tw:rounded-box"></div>
+  } @else if (store.teamDetailState() === 'error') {
+    <div class="tw:alert tw:alert-error" role="alert">
+      <p class="tw:m-0">{{ store.teamDetailError() }}</p>
+      <button type="button" class="tw:btn tw:btn-sm" (click)="store.loadTeam(teamId())">
+        Réessayer
+      </button>
+    </div>
+  } @else if (store.teamDetailState() === 'not-found' || !current) {
     <div class="tw:alert tw:alert-warning" role="alert">
       <p i18n="@@teamDetail.notFound">Cette équipe est introuvable.</p>
       <a routerLink="/" class="tw:btn tw:btn-soft tw:btn-primary" i18n="@@teamDetail.backHome"
@@ -14,7 +23,7 @@
         type="button"
         class="tw:btn tw:btn-primary"
         #prepBtn
-        [disabled]="preparing"
+        [disabled]="savingMatchup"
         (click)="openOpponentImport(prepBtn)"
         i18n="@@teamDetail.prepareMatchup"
       >
@@ -22,31 +31,37 @@
       </button>
     </div>
 
-    @if (preparing) {
-      <p class="tw:flex tw:items-center tw:gap-2" role="status">
-        <span class="tw:loading tw:loading-spinner tw:loading-sm"></span>
-        <span i18n="@@teamDetail.preparing">Préparation de démonstration…</span>
-      </p>
-    }
-    @if (prepareError; as err) {
+    @if (saveMatchupError; as err) {
       <div class="tw:alert tw:alert-error" role="alert">{{ err }}</div>
     }
 
     <section class="tw:flex-1 tw:min-h-0 tw:overflow-y-auto">
       <h2 class="tw:m-0" i18n="@@teamDetail.matchupsTitle">Matchups préparés</h2>
-      @if (matchups().length === 0) {
+      @if (store.matchupsState() === 'loading' && store.matchups().length === 0) {
+        <div class="tw:skeleton tw:h-20 tw:w-full tw:rounded-box tw:mt-2"></div>
+      } @else if (store.matchupsState() === 'error') {
+        <div class="tw:alert tw:alert-error tw:mt-2" role="alert">
+          <p class="tw:m-0">{{ store.matchupsError() }}</p>
+          <button type="button" class="tw:btn tw:btn-sm" (click)="store.loadMatchups(teamId())">
+            Réessayer
+          </button>
+        </div>
+      } @else if (store.matchups().length === 0) {
         <p class="tw:text-base-content/70" i18n="@@teamDetail.noMatchups">
           Aucun adversaire préparé pour le moment.
         </p>
       } @else {
         <ul class="tw:flex tw:flex-col tw:gap-3 tw:mt-2">
-          @for (m of matchups(); track m.id) {
+          @for (m of store.matchups(); track m.id) {
             <li>
               <a
                 [routerLink]="['/teams', current.id, 'matchups', m.id]"
                 class="tw:block tw:bg-base-100 tw:border tw:border-base-300 tw:rounded-box tw:p-4 hover:tw:bg-base-300/40 tw:no-underline tw:text-inherit"
               >
                 <span class="tw:font-medium">{{ m.opponent.name }}</span>
+                @if (matchupStatusLabel(m.id); as status) {
+                  <p class="tw:text-sm tw:text-base-content/70 tw:m-0 tw:mt-1">{{ status }}</p>
+                }
                 <div class="tw:flex tw:flex-row tw:gap-2 tw:overflow-x-auto tw:mt-2">
                   @for (mon of m.opponent.pokemon; track mon.slot) {
                     <app-pokemon-portrait [pokemon]="mon" />
@@ -56,6 +71,16 @@
             </li>
           }
         </ul>
+        @if (store.matchupsHasNextPage()) {
+          <button
+            type="button"
+            class="tw:btn tw:btn-ghost tw:mt-2"
+            [disabled]="store.matchupsLoadingMore()"
+            (click)="store.loadMoreMatchups(teamId())"
+          >
+            Charger la suite
+          </button>
+        }
       }
     </section>
   }

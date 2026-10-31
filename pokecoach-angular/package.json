@@ -8,7 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "e2e": "playwright test"
+    "e2e": "playwright test e2e/coach.spec.ts",
+    "e2e:live": "playwright test e2e/coach-live.spec.ts",
+    "generate:demo-seed": "npx --yes tsx scripts/generate-demo-seed.mts"
   },
   "private": true,
   "packageManager": "npm@10.9.9",

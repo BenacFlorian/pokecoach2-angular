@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PokepasteParser } from './pokepaste-parser';
-import { DEMO_OPPONENT_PASTE, DEMO_OUR_TEAM_PASTE } from '../data/demo-teams';
+import { DEMO_OPPONENT_PASTE, DEMO_OUR_TEAM_PASTE } from '../../../testing/fixtures/demo-teams';
 
 describe('PokepasteParser', () => {
   const parser = new PokepasteParser();

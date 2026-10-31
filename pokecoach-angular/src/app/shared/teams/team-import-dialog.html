@@ -93,11 +93,13 @@
       @if (resolving()) {
         <p class="tw:flex tw:items-center tw:gap-2" role="status">
           <span class="tw:loading tw:loading-spinner tw:loading-sm"></span>
-          @if (context() === 'opponent') {
-            <span i18n="@@teamImport.preparing">Préparation de démonstration…</span>
-          } @else {
-            <span i18n="@@teamImport.importing">Import en cours…</span>
-          }
+          <span i18n="@@teamImport.importing">Import en cours…</span>
+        </p>
+      }
+      @if (saving()) {
+        <p class="tw:flex tw:items-center tw:gap-2" role="status">
+          <span class="tw:loading tw:loading-spinner tw:loading-sm"></span>
+          <span i18n="@@teamImport.saving">Enregistrement sur le serveur…</span>
         </p>
       }
 
@@ -105,8 +107,8 @@
         <button
           type="button"
           class="tw:btn tw:btn-ghost"
-          [disabled]="resolving()"
-          (click)="close()"
+          [disabled]="resolving() || saving()"
+          (click)="onDialogCancel($event)"
           i18n="@@teamImport.cancel"
         >
           Annuler
@@ -114,7 +116,7 @@
         <button
           type="submit"
           class="tw:btn tw:btn-primary"
-          [disabled]="resolving()"
+          [disabled]="resolving() || saving()"
           i18n="@@teamImport.submit"
         >
           Valider

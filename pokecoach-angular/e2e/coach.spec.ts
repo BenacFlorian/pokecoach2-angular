@@ -1,58 +1,17 @@
 import { test, expect } from '@playwright/test';
-
-const SAMPLE_PASTE = `Pikachu @ Light Ball
-Ability: Static
-Level: 50
-- Thunderbolt
-- Fake Out
-- Protect
-- Volt Switch
-
-Eevee @ Eviolite
-Ability: Adaptability
-Level: 50
-- Hyper Voice
-- Protect
-- Helping Hand
-- Tail Whip
-
-Snorlax @ Leftovers
-Ability: Gluttony
-Level: 50
-- Body Slam
-- Protect
-- Yawn
-- Rest
-
-Lucario @ Life Orb
-Ability: Inner Focus
-Level: 50
-- Close Combat
-- Protect
-- Extreme Speed
-- Bullet Punch
-
-Clefairy @ Eviolite
-Ability: Friend Guard
-Level: 50
-- Follow Me
-- Protect
-- Helping Hand
-- After You
-
-Togepi @ Eviolite
-Ability: Super Luck
-Level: 50
-- Follow Me
-- Protect
-- Helping Hand
-- Ancient Power
-`;
+import {
+  createMockGraphqlState,
+  installGraphqlMock,
+  SAMPLE_PASTE,
+} from './fixtures/graphql-mock';
 
 test.describe('parcours pokecoach', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.clear();
+      localStorage.setItem(
+        'pokecoach.demo.v1',
+        JSON.stringify({ schemaVersion: 1, teams: [], matchups: [] }),
+      );
     });
     await page.route('https://pokeapi.co/**', async (route) => {
       await route.fulfill({
@@ -64,10 +23,16 @@ test.describe('parcours pokecoach', () => {
         }),
       });
     });
+    const state = createMockGraphqlState();
+    await installGraphqlMock(page, state);
   });
 
-  test('accueil, équipe texte, adversaire mock, onglets', async ({ page }) => {
+  test('accueil, équipe texte, adversaire, matchup sans analyse', async ({
+    page,
+  }) => {
     await page.goto('/');
+
+    await expect(page.getByText('Aucune équipe enregistrée')).toBeVisible();
 
     await page.getByRole('button', { name: 'Ajouter une équipe' }).click();
     await page.getByLabel('Nom').fill('Équipe E2E');
@@ -75,16 +40,17 @@ test.describe('parcours pokecoach', () => {
     await page.locator('textarea').fill(SAMPLE_PASTE);
     await page.getByRole('button', { name: 'Valider' }).click();
 
+    await expect(page.getByRole('link', { name: /Équipe E2E/ })).toBeVisible({
+      timeout: 10_000,
+    });
+
     await page.getByRole('link', { name: /Équipe E2E/ }).click();
     await expect(page.getByText('Aucun adversaire préparé')).toBeVisible();
 
-    await page.route('https://pokepast.es/**', async (route) => {
-      await route.fulfill({ status: 200, body: SAMPLE_PASTE });
-    });
-
     await page.getByRole('button', { name: 'Préparer un match up' }).click();
     await page.getByLabel('Nom').fill('Adv URL');
-    await page.getByPlaceholder('https://pokepast.es').fill('https://pokepast.es/e2e-test');
+    await page.getByLabel('Texte Showdown').click();
+    await page.locator('textarea').fill(SAMPLE_PASTE);
     await page.getByRole('button', { name: 'Valider' }).click();
 
     await expect(page.getByRole('link', { name: /Adv URL/ })).toBeVisible({
@@ -92,10 +58,8 @@ test.describe('parcours pokecoach', () => {
     });
 
     await page.getByRole('link', { name: /Adv URL/ }).click();
-    await expect(page.getByText('Données de démonstration')).toBeVisible();
-    await page.getByRole('tab', { name: 'Lead & pick' }).click();
-    await page.getByRole('tab', { name: 'Gameplan' }).click();
-    await page.getByRole('link', { name: 'pokecoach' }).click();
-    await expect(page.getByRole('heading', { name: 'Nos équipes' })).toBeVisible();
+    await expect(
+      page.getByText('Matchup enregistré — aucune analyse disponible'),
+    ).toBeVisible();
   });
 });

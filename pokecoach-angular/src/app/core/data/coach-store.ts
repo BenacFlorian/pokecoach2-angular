@@ -1,135 +1,356 @@
-import { Injectable, signal } from '@angular/core';
-import type { PreparedMatchup } from '../models/matchup.model';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { Subscription } from 'rxjs';
 import type { ImportedTeam, Team } from '../models/team.model';
-import {
-  buildMockMatchupReport,
-} from './demo-reports';
-import {
-  DEMO_OPPONENT_TEAM,
-  DEMO_TEAM_EMPTY,
-  DEMO_TEAM_WITH_MATCHUP,
-} from './demo-teams';
-import {
-  COACH_STORAGE_KEY,
-  loadCoachSnapshot,
-  saveCoachSnapshot,
-  type CoachSnapshot,
-} from './coach-storage';
+import { CoachApi } from '../graphql/coach-api';
+import { userMessageForGraphqlError } from '../graphql/graphql-error';
+import type { MatchupDetail, MatchupSummary, Page } from '../graphql/coach-mappers';
+import { isUuid } from '../graphql/coach-mappers';
+
+export type LoadState = 'idle' | 'loading' | 'ready' | 'error' | 'not-found';
+
+export interface ListResource<T> {
+  state: LoadState;
+  items: T[];
+  error: string | null;
+  endCursor: string | null;
+  hasNextPage: boolean;
+  loadingMore: boolean;
+}
+
+export interface DetailResource<T> {
+  state: LoadState;
+  value: T | null;
+  error: string | null;
+}
+
+function emptyList<T>(): ListResource<T> {
+  return {
+    state: 'idle',
+    items: [],
+    error: null,
+    endCursor: null,
+    hasNextPage: false,
+    loadingMore: false,
+  };
+}
+
+function emptyDetail<T>(): DetailResource<T> {
+  return { state: 'idle', value: null, error: null };
+}
 
 @Injectable({ providedIn: 'root' })
 export class CoachStore {
-  private readonly teamsSignal = signal<Team[]>([]);
-  private readonly matchupsSignal = signal<PreparedMatchup[]>([]);
-  private readonly storageWarningSignal = signal<string | null>(null);
-  private demoInitialized = false;
+  private readonly api = inject(CoachApi);
 
-  readonly teams = this.teamsSignal.asReadonly();
-  readonly matchups = this.matchupsSignal.asReadonly();
-  readonly storageWarning = this.storageWarningSignal.asReadonly();
+  private readonly teamsResource = signal<ListResource<Team>>(emptyList());
+  private readonly teamDetailResource = signal<DetailResource<Team>>(emptyDetail());
+  private readonly matchupsResource = signal<ListResource<MatchupSummary>>(emptyList());
+  private readonly matchupDetailResource = signal<DetailResource<MatchupDetail>>(emptyDetail());
 
-  constructor() {
-    this.bootstrap();
+  private teamsRequestGen = 0;
+  private teamDetailGen = 0;
+  private teamDetailKey = '';
+  private matchupsRequestGen = 0;
+  private matchupsTeamKey = '';
+  private matchupDetailGen = 0;
+  private matchupDetailKey = '';
+
+  private teamsSub: Subscription | null = null;
+  private teamSub: Subscription | null = null;
+  private matchupsSub: Subscription | null = null;
+  private matchupSub: Subscription | null = null;
+
+  readonly teamsState = computed(() => this.teamsResource().state);
+  readonly teams = computed(() => this.teamsResource().items);
+  readonly teamsError = computed(() => this.teamsResource().error);
+  readonly teamsHasNextPage = computed(() => this.teamsResource().hasNextPage);
+  readonly teamsLoadingMore = computed(() => this.teamsResource().loadingMore);
+
+  readonly teamDetailState = computed(() => this.teamDetailResource().state);
+  readonly teamDetail = computed(() => this.teamDetailResource().value);
+  readonly teamDetailError = computed(() => this.teamDetailResource().error);
+
+  readonly matchupsState = computed(() => this.matchupsResource().state);
+  readonly matchups = computed(() => this.matchupsResource().items);
+  readonly matchupsError = computed(() => this.matchupsResource().error);
+  readonly matchupsHasNextPage = computed(() => this.matchupsResource().hasNextPage);
+  readonly matchupsLoadingMore = computed(() => this.matchupsResource().loadingMore);
+
+  readonly matchupDetailState = computed(() => this.matchupDetailResource().state);
+  readonly matchupDetail = computed(() => this.matchupDetailResource().value);
+  readonly matchupDetailError = computed(() => this.matchupDetailResource().error);
+
+  loadTeams(): void {
+    const gen = ++this.teamsRequestGen;
+    this.teamsSub?.unsubscribe();
+    this.teamsResource.set({ ...emptyList(), state: 'loading' });
+    this.teamsSub = this.api.listOwnedTeams().subscribe({
+      next: (page) => this.applyTeamsPage(gen, page, false),
+      error: (err) => this.failTeams(gen, err),
+    });
   }
 
-  private bootstrap(): void {
-    const loaded = loadCoachSnapshot();
-    if (loaded.kind === 'ok') {
-      this.teamsSignal.set(loaded.snapshot.teams);
-      this.matchupsSignal.set(loaded.snapshot.matchups);
-      this.demoInitialized = true;
+  loadMoreTeams(): void {
+    const current = this.teamsResource();
+    if (!current.hasNextPage || current.loadingMore || current.state !== 'ready') {
       return;
     }
-    if (loaded.kind === 'error') {
-      this.storageWarningSignal.set(loaded.message);
-    }
-    this.seedDemoOnce();
+    const gen = this.teamsRequestGen;
+    this.teamsResource.update((r) => ({ ...r, loadingMore: true, error: null }));
+    this.teamsSub?.unsubscribe();
+    this.teamsSub = this.api.listOwnedTeams(current.endCursor ?? undefined).subscribe({
+      next: (page) => this.applyTeamsPage(gen, page, true),
+      error: (err) => {
+        if (gen !== this.teamsRequestGen) {
+          return;
+        }
+        this.teamsResource.update((r) => ({
+          ...r,
+          loadingMore: false,
+          error: userMessageForGraphqlError(err),
+        }));
+      },
+    });
   }
 
-  private seedDemoOnce(): void {
-    if (this.demoInitialized) {
+  loadTeam(teamId: string): void {
+    if (!isUuid(teamId)) {
+      this.teamDetailResource.set({ state: 'not-found', value: null, error: null });
       return;
     }
-    this.demoInitialized = true;
-
-    const report = buildMockMatchupReport(
-      DEMO_TEAM_WITH_MATCHUP,
-      DEMO_OPPONENT_TEAM,
-    );
-    const demoMatchup: PreparedMatchup = {
-      id: 'demo-matchup-1',
-      teamId: DEMO_TEAM_WITH_MATCHUP.id,
-      opponent: DEMO_OPPONENT_TEAM,
-      report,
-      createdAt: '2026-10-01T10:30:00.000Z',
-    };
-
-    this.teamsSignal.set([DEMO_TEAM_WITH_MATCHUP, DEMO_TEAM_EMPTY]);
-    this.matchupsSignal.set([demoMatchup]);
-    this.persist();
+    const gen = ++this.teamDetailGen;
+    this.teamDetailKey = teamId;
+    this.teamSub?.unsubscribe();
+    this.teamDetailResource.set({ state: 'loading', value: null, error: null });
+    this.teamSub = this.api.getOwnedTeam(teamId).subscribe({
+      next: (team) => {
+        if (gen !== this.teamDetailGen || this.teamDetailKey !== teamId) {
+          return;
+        }
+        if (!team) {
+          this.teamDetailResource.set({ state: 'not-found', value: null, error: null });
+          return;
+        }
+        this.teamDetailResource.set({ state: 'ready', value: team, error: null });
+      },
+      error: (err) => {
+        if (gen !== this.teamDetailGen) {
+          return;
+        }
+        this.teamDetailResource.set({
+          state: 'error',
+          value: null,
+          error: userMessageForGraphqlError(err),
+        });
+      },
+    });
   }
 
-  addTeam(name: string, imported: ImportedTeam): Team {
-    const team: Team = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      source: imported.source,
-      pokemon: imported.pokemon,
-      createdAt: new Date().toISOString(),
-    };
-    this.teamsSignal.update((teams) => [...teams, team]);
-    this.persist();
-    return team;
-  }
-
-  getTeam(id: string): Team | undefined {
-    return this.teamsSignal().find((t) => t.id === id);
-  }
-
-  matchupsFor(teamId: string): PreparedMatchup[] {
-    return this.matchupsSignal().filter((m) => m.teamId === teamId);
-  }
-
-  getMatchup(teamId: string, matchupId: string): PreparedMatchup | undefined {
-    const matchup = this.matchupsSignal().find((m) => m.id === matchupId);
-    if (!matchup || matchup.teamId !== teamId) {
-      return undefined;
+  loadMatchups(teamId: string): void {
+    if (!isUuid(teamId)) {
+      this.matchupsResource.set({ ...emptyList(), state: 'not-found' });
+      return;
     }
-    return matchup;
+    const gen = ++this.matchupsRequestGen;
+    this.matchupsTeamKey = teamId;
+    this.matchupsSub?.unsubscribe();
+    this.matchupsResource.set({ ...emptyList(), state: 'loading' });
+    this.matchupsSub = this.api.listMatchups(teamId).subscribe({
+      next: (page) => this.applyMatchupsPage(gen, teamId, page, false),
+      error: (err) => this.failMatchups(gen, teamId, err),
+    });
   }
 
-  addMatchup(matchup: PreparedMatchup): void {
-    this.matchupsSignal.update((list) => [...list, matchup]);
-    this.persist();
-  }
-
-  snapshot(): CoachSnapshot {
-    return {
-      schemaVersion: 1,
-      teams: this.teamsSignal(),
-      matchups: this.matchupsSignal(),
-    };
-  }
-
-  private persist(): void {
-    const result = saveCoachSnapshot(this.snapshot());
-    if (result.kind === 'error') {
-      this.storageWarningSignal.set(result.message);
-    } else {
-      this.storageWarningSignal.set(null);
+  loadMoreMatchups(teamId: string): void {
+    const current = this.matchupsResource();
+    if (
+      this.matchupsTeamKey !== teamId ||
+      !current.hasNextPage ||
+      current.loadingMore ||
+      current.state !== 'ready'
+    ) {
+      return;
     }
+    const gen = this.matchupsRequestGen;
+    this.matchupsResource.update((r) => ({ ...r, loadingMore: true, error: null }));
+    this.matchupsSub?.unsubscribe();
+    this.matchupsSub = this.api
+      .listMatchups(teamId, current.endCursor ?? undefined)
+      .subscribe({
+        next: (page) => this.applyMatchupsPage(gen, teamId, page, true),
+        error: (err) => {
+          if (gen !== this.matchupsRequestGen || this.matchupsTeamKey !== teamId) {
+            return;
+          }
+          this.matchupsResource.update((r) => ({
+            ...r,
+            loadingMore: false,
+            error: userMessageForGraphqlError(err),
+          }));
+        },
+      });
+  }
+
+  loadMatchup(teamId: string, matchupId: string): void {
+    const key = `${teamId}:${matchupId}`;
+    if (!isUuid(teamId) || !isUuid(matchupId)) {
+      this.matchupDetailResource.set({ state: 'not-found', value: null, error: null });
+      return;
+    }
+    const gen = ++this.matchupDetailGen;
+    this.matchupDetailKey = key;
+    this.matchupSub?.unsubscribe();
+    this.matchupDetailResource.set({ state: 'loading', value: null, error: null });
+    this.matchupSub = this.api.getMatchup(teamId, matchupId).subscribe({
+      next: (detail) => {
+        if (gen !== this.matchupDetailGen || this.matchupDetailKey !== key) {
+          return;
+        }
+        if (!detail) {
+          this.matchupDetailResource.set({ state: 'not-found', value: null, error: null });
+          return;
+        }
+        this.matchupDetailResource.set({ state: 'ready', value: detail, error: null });
+      },
+      error: (err) => {
+        if (gen !== this.matchupDetailGen) {
+          return;
+        }
+        this.matchupDetailResource.set({
+          state: 'error',
+          value: null,
+          error: userMessageForGraphqlError(err),
+        });
+      },
+    });
+  }
+
+  refreshMatchup(teamId: string, matchupId: string): void {
+    this.loadMatchup(teamId, matchupId);
+  }
+
+  createOwnedTeam(
+    requestId: string,
+    name: string,
+    imported: ImportedTeam,
+  ) {
+    return this.api.createOwnedTeam(requestId, name, imported);
+  }
+
+  reconcileOwnedTeam(requestId: string) {
+    return this.api.getOwnedTeam(requestId);
+  }
+
+  createOpponentMatchup(
+    ids: { matchupId: string; opponentId: string },
+    teamId: string,
+    name: string,
+    imported: ImportedTeam,
+  ) {
+    return this.api.createOpponentMatchup(ids, teamId, name, imported);
+  }
+
+  reconcileMatchup(teamId: string, matchupId: string) {
+    return this.api.getMatchup(teamId, matchupId);
+  }
+
+  prependTeam(team: Team): void {
+    this.teamsResource.update((r) => ({
+      ...r,
+      items: [team, ...r.items.filter((t) => t.id !== team.id)],
+      state: 'ready',
+    }));
+  }
+
+  appendMatchup(summary: MatchupSummary): void {
+    this.matchupsResource.update((r) => ({
+      ...r,
+      items: [summary, ...r.items.filter((m) => m.id !== summary.id)],
+      state: 'ready',
+    }));
+  }
+
+  private applyTeamsPage(gen: number, page: Page<Team>, append: boolean): void {
+    if (gen !== this.teamsRequestGen) {
+      return;
+    }
+    this.teamsResource.update((r) => ({
+      state: 'ready',
+      items: append ? dedupeById([...r.items, ...page.items]) : page.items,
+      error: null,
+      endCursor: page.endCursor,
+      hasNextPage: page.hasNextPage,
+      loadingMore: false,
+    }));
+  }
+
+  private failTeams(gen: number, err: unknown): void {
+    if (gen !== this.teamsRequestGen) {
+      return;
+    }
+    this.teamsResource.set({
+      ...emptyList(),
+      state: 'error',
+      error: userMessageForGraphqlError(err),
+    });
+  }
+
+  private applyMatchupsPage(
+    gen: number,
+    teamId: string,
+    page: Page<MatchupSummary>,
+    append: boolean,
+  ): void {
+    if (gen !== this.matchupsRequestGen || this.matchupsTeamKey !== teamId) {
+      return;
+    }
+    this.matchupsResource.update((r) => ({
+      state: 'ready',
+      items: append ? dedupeById([...r.items, ...page.items]) : page.items,
+      error: null,
+      endCursor: page.endCursor,
+      hasNextPage: page.hasNextPage,
+      loadingMore: false,
+    }));
+  }
+
+  private failMatchups(gen: number, teamId: string, err: unknown): void {
+    if (gen !== this.matchupsRequestGen || this.matchupsTeamKey !== teamId) {
+      return;
+    }
+    this.matchupsResource.set({
+      ...emptyList(),
+      state: 'error',
+      error: userMessageForGraphqlError(err),
+    });
   }
 
   /** Test helper */
   resetForTests(): void {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.removeItem(COACH_STORAGE_KEY);
-    }
-    this.teamsSignal.set([]);
-    this.matchupsSignal.set([]);
-    this.demoInitialized = false;
-    this.storageWarningSignal.set(null);
-    this.seedDemoOnce();
+    this.teamsRequestGen++;
+    this.teamDetailGen++;
+    this.matchupsRequestGen++;
+    this.matchupDetailGen++;
+    this.teamsSub?.unsubscribe();
+    this.teamSub?.unsubscribe();
+    this.matchupsSub?.unsubscribe();
+    this.matchupSub?.unsubscribe();
+    this.teamsResource.set(emptyList());
+    this.teamDetailResource.set(emptyDetail());
+    this.matchupsResource.set(emptyList());
+    this.matchupDetailResource.set(emptyDetail());
   }
 }
 
-export { COACH_STORAGE_KEY };
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const out: T[] = [];
+  for (const item of items) {
+    if (seen.has(item.id)) {
+      continue;
+    }
+    seen.add(item.id);
+    out.push(item);
+  }
+  return out;
+}

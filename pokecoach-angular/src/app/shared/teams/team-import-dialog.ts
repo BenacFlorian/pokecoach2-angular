@@ -41,6 +41,7 @@ export class TeamImportDialog {
     viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
 
   readonly resolving = signal(false);
+  readonly saving = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly errorDetails = signal<readonly string[]>([]);
 
@@ -62,8 +63,10 @@ export class TeamImportDialog {
     this.lastTrigger = trigger ?? null;
     this.errorMessage.set(null);
     this.errorDetails.set([]);
-    this.form.reset({ name: '', url: '', text: '' });
-    this.sourceMode.set('url');
+    if (!this.saving()) {
+      this.form.reset({ name: '', url: '', text: '' });
+      this.sourceMode.set('url');
+    }
     const dialog = this.dialogRef().nativeElement;
     if (!dialog.open) {
       dialog.showModal();
@@ -77,17 +80,22 @@ export class TeamImportDialog {
   }
 
   close(): void {
-    this.cancelResolve();
+    this.cancelResolveOnly();
     const dialog = this.dialogRef().nativeElement;
     if (dialog.open) {
       dialog.close();
     }
     this.lastTrigger?.focus();
     this.lastTrigger = null;
+    this.saving.set(false);
+  }
+
+  setSaving(active: boolean): void {
+    this.saving.set(active);
   }
 
   setMode(mode: 'url' | 'text'): void {
-    if (this.resolving()) {
+    if (this.resolving() || this.saving()) {
       return;
     }
     this.sourceMode.set(mode);
@@ -96,11 +104,12 @@ export class TeamImportDialog {
 
   onDialogCancel(event: Event): void {
     event.preventDefault();
+    this.cancelled.emit();
     this.close();
   }
 
   submit(): void {
-    if (this.resolving()) {
+    if (this.resolving() || this.saving()) {
       return;
     }
     const name = this.form.controls.name.value.trim();
@@ -130,20 +139,12 @@ export class TeamImportDialog {
     this.resolving.set(true);
     this.errorMessage.set(null);
     this.errorDetails.set([]);
-    this.cancelResolve();
+    this.cancelResolveOnly();
 
     this.resolveSub = this.teamImport.resolve(input).subscribe({
       next: (imported) => {
+        this.resolving.set(false);
         this.submitted.emit({ name, imported });
-        if (this.context() === 'own-team') {
-          this.resolving.set(false);
-          const dialog = this.dialogRef().nativeElement;
-          if (dialog.open) {
-            dialog.close();
-          }
-          this.lastTrigger?.focus();
-          this.lastTrigger = null;
-        }
       },
       error: (err: unknown) => {
         this.resolving.set(false);
@@ -159,13 +160,13 @@ export class TeamImportDialog {
     });
   }
 
-  private cancelResolve(): void {
+  private cancelResolveOnly(): void {
     this.resolveSub?.unsubscribe();
     this.resolveSub = null;
-    this.resolving.set(false);
   }
 
   resetLoading(): void {
     this.resolving.set(false);
+    this.saving.set(false);
   }
 }

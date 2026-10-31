@@ -5,6 +5,7 @@
       type="button"
       class="tw:btn tw:btn-soft tw:btn-primary"
       #addBtn
+      [disabled]="savingTeam"
       (click)="openImport(addBtn)"
       i18n="@@home.addTeam"
     >
@@ -12,15 +13,22 @@
     </button>
   </div>
 
-  @if (store.storageWarning(); as warn) {
-    <div class="tw:alert tw:alert-warning tw:text-sm" role="status">{{ warn }}</div>
+  @if (saveTeamError; as err) {
+    <div class="tw:alert tw:alert-error tw:text-sm" role="alert">{{ err }}</div>
   }
 
   <div class="tw:flex-1 tw:min-h-0 tw:overflow-y-auto tw:flex tw:flex-col tw:gap-3">
-    @if (store.teams().length === 0) {
-      <p i18n="@@home.empty">
-        Aucune équipe enregistrée. Ajoutez la vôtre ou rechargez pour retrouver les exemples locaux.
-      </p>
+    @if (store.teamsState() === 'loading' && store.teams().length === 0) {
+      @for (_ of [1, 2, 3]; track $index) {
+        <div class="tw:skeleton tw:h-24 tw:w-full tw:rounded-box"></div>
+      }
+    } @else if (store.teamsState() === 'error') {
+      <div class="tw:alert tw:alert-error" role="alert">
+        <p class="tw:m-0">{{ store.teamsError() }}</p>
+        <button type="button" class="tw:btn tw:btn-sm" (click)="retryTeams()">Réessayer</button>
+      </div>
+    } @else if (store.teamsState() === 'ready' && store.teams().length === 0) {
+      <p i18n="@@home.empty">Aucune équipe enregistrée. Ajoutez la vôtre pour commencer.</p>
     }
     @for (team of store.teams(); track team.id) {
       <a
@@ -39,7 +47,21 @@
         }
       </a>
     }
+    @if (store.teamsHasNextPage()) {
+      <button
+        type="button"
+        class="tw:btn tw:btn-ghost tw:w-fit"
+        [disabled]="store.teamsLoadingMore()"
+        (click)="store.loadMoreTeams()"
+      >
+        Charger la suite
+      </button>
+    }
   </div>
 </div>
 
-<app-team-import-dialog context="own-team" (submitted)="onTeamImported($event)" />
+<app-team-import-dialog
+  context="own-team"
+  (submitted)="onTeamImported($event)"
+  (cancelled)="onImportCancelled()"
+/>

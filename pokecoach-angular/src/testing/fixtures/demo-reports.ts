@@ -7,11 +7,11 @@ import type {
   OpponentLeadStats,
   PokemonRef,
   SelectionResult,
-} from '../models/matchup.model';
-import type { PokemonSlot, Team } from '../models/team.model';
+} from '../../app/core/models/matchup.model';
+import type { PokemonSlot, Team } from '../../app/core/models/team.model';
 import {
   opponentLeadId,
-} from '../matchup/matchup-display';
+} from '../../app/core/matchup/matchup-display';
 
 const PHASE_A = 1000;
 const PHASE_B = 50;
