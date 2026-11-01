@@ -48,8 +48,8 @@ devbox run -- npm --prefix pokecoach-angular exec playwright install chromium
 - **Import** : parsing Showdown local ; URL `pokepast.es` récupérée en HTTP (`/raw`).
 - **Images** : PokéAPI (`/api/v2/pokemon/…`) avec cache et placeholder local.
 - **API métier** : GraphQL PostGraphile (`/graphql`, proxy dev vers `127.0.0.1:4042`). Équipes et matchups persistés en PostgreSQL.
-- **Analyses** : lues depuis `core.matchup_runs` (dernier succès + statut du run le plus récent). Après ajout d’un adversaire, le frontend enregistre le format (`regulation`) puis appelle `POST /api-python/matchups/{id}/analyses` (profil `standard`, cible = dernière phase déployée) et ouvre le `runId` renvoyé. En cas d’échec HTTP, le matchup reste utilisable via « Réessayer l’analyse » (même clé d’idempotence).
-- **Tests** : `e2e/matchup-create-analysis.spec.ts` mock GraphQL + FastAPI ; `e2e:matchup-analysis-live` exige `POKECOACH_ANALYSIS_LIVE=1` et une stack Python réelle (non validée sans route d’analyse).
+- **Analyses** : workflow **A→C→B→D** (ouvertures en B, après sélection C). Lues depuis `core.matchup_runs` (checkpoints partiels + `resultRevision`). Recette manuelle : [docs/recette-ouvertures-conditionnees.md](./docs/recette-ouvertures-conditionnees.md).
+- **Tests** : `e2e/matchup-create-analysis.spec.ts` mock GraphQL + FastAPI ; `e2e:conditioned-openings-live` avec `POKECOACH_CONDITIONED_OPENINGS_RUN_URL` ; `e2e:matchup-analysis-live` exige `POKECOACH_ANALYSIS_LIVE=1` et une stack Python réelle.
 - **Ancien localStorage** (`pokecoach.demo.v1`) : ignoré par l’application ; non supprimé.
 
 Voir [Intégration PostGraphile](./docs/integration-postgraphile.md).
@@ -64,3 +64,4 @@ Pas de moteur Python / LLM dans le navigateur. Les tests e2e mockent GraphQL (su
 - [Plan 2 — interface mock](./docs/plans/2026-10-31-02-angular-interface-mock.md)
 - [Plan 3 — PostGraphile](./docs/plans/2026-10-31-03-angular-postgraphile.md)
 - [Plan 4 — lancer Python à l’ajout d’un matchup](./docs/plans/2026-10-31-04-angular-ajout-matchup-python.md)
+- [Plan 5 — ouvertures conditionnées dans Lead & pick](./docs/plans/2026-11-01-05-ouvertures-conditionnees-lead-pick.md) — après le plan backend associé : A → C → B → D, suppression des actions T1 d’Opponent Leads et présentation des deux côtés face à notre sélection fixe. E reste hors périmètre, dans son plan dédié.

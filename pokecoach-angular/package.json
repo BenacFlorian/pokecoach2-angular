@@ -12,6 +12,8 @@
     "e2e:matchup-analysis": "playwright test e2e/matchup-create-analysis.spec.ts",
     "e2e:matchup-analysis-live": "playwright test e2e/matchup-create-analysis-live.spec.ts",
     "e2e:analysis-live": "playwright test e2e/analysis-progressive-live.spec.ts",
+    "e2e:conditioned-openings-live": "playwright test e2e/conditioned-openings-live.spec.ts",
+    "e2e:conditioned-openings": "playwright test e2e/conditioned-openings.spec.ts",
     "e2e:live": "playwright test e2e/coach-live.spec.ts",
     "generate:demo-seed": "tsx scripts/generate-demo-seed.mts",
     "generate:demo-seed:check": "tsx scripts/generate-demo-seed.mts --check",

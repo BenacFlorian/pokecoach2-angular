@@ -1,10 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
-import type {
-  BattleAction,
-  Frequency,
-  OpponentLeadStats,
-  PokemonRef,
-} from '../../core/models/matchup.model';
+import type { OpponentLeadStats } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
 import {
   formatFrequencyPercent,
@@ -22,7 +17,7 @@ export class OpponentLeads {
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
   readonly leads = input<readonly OpponentLeadStats[] | null>(null);
-  readonly turn1Pending = input(false);
+  readonly backsPending = input(false);
 
   readonly selectedLeadId = input.required<string>();
   readonly selectedLeadIdChange = output<string>();
@@ -46,14 +41,6 @@ export class OpponentLeads {
       return undefined;
     }
     return list.find((l) => l.id === this.selectedLeadId());
-  });
-
-  readonly sortedJointActions = computed(() => {
-    const lead = this.activeLead();
-    if (!lead) {
-      return [];
-    }
-    return [...lead.jointTurn1Actions].sort((a, b) => b.count - a.count);
   });
 
   readonly sortedBackPairs = computed(() => {
@@ -83,27 +70,7 @@ export class OpponentLeads {
   percent = formatPercent;
   freqPercent = formatFrequencyPercent;
 
-  mon(team: Team, slot: PokemonRef['slot']) {
+  mon(team: Team, slot: number) {
     return team.pokemon[slot];
-  }
-
-  formatAction(action: BattleAction): string {
-    if (action.kind === 'switch') {
-      const from = this.mon(this.opponentTeam(), action.actor.slot).species;
-      const to = this.mon(this.opponentTeam(), action.switchTo.slot).species;
-      return `${from} → ${to}`;
-    }
-    const actor = this.mon(this.opponentTeam(), action.actor.slot).species;
-    const targets = action.targets
-      .map((t) =>
-        t.kind === 'zone' ? t.zone : this.mon(this.ourTeam(), t.ref.slot).species,
-      )
-      .join(', ');
-    const tera = action.terastallize ? ` (Tera ${action.terastallize})` : '';
-    return `${actor} : ${action.move} → ${targets}${tera}`;
-  }
-
-  formatJoint(joint: Frequency<readonly [BattleAction, BattleAction]>): string {
-    return joint.value.map((a) => this.formatAction(a)).join(' · ');
   }
 }

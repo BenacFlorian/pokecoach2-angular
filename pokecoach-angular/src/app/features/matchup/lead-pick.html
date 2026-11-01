@@ -35,37 +35,119 @@
   </div>
 
   <div class="tw:flex tw:flex-col tw:gap-4">
-    @for (study of rec.studiedLeads; track study.opponentLeadId) {
-      <article class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
-        <h4 class="tw:m-0">{{ leadLabel(study.opponentLeadId) }}</h4>
-        @if (study.primaryActions.length) {
-          <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
-            @for (action of study.primaryActions; track $index) {
-              <li>{{ formatAction(action) }}</li>
-            }
-          </ul>
-        } @else {
-          <p class="tw:text-sm tw:text-base-content/70 tw:mt-2" i18n="@@leadPick.insufficient">
-            Données insuffisantes
-          </p>
-        }
-        @if (study.alternatives.length) {
-          <p class="tw:text-sm tw:mt-3" i18n="@@leadPick.alternatives">Alternatives</p>
-          <ul class="tw:list-disc tw:pl-4 tw:text-sm">
-            @for (alt of study.alternatives; track alt) {
-              <li>{{ alt }}</li>
-            }
-          </ul>
-        }
-      </article>
-    }
+    @if (openingsPending()) {
+      <p class="tw:text-base-content/70 tw:m-0" i18n="@@leadPick.openingsPending">
+        Les ouvertures pour cette sélection seront calculées à l’étape suivante (phase B).
+      </p>
+    } @else if (openings(); as cards) {
+      <p class="tw:text-sm tw:text-base-content/80 tw:m-0" i18n="@@leadPick.openingsContext">
+        Notre quatre et notre lead sont fixés. Les choix adverses et les nôtres sont des fréquences
+        observées avant résolution du tour — pas une réponse optimale à une action adverse précise.
+      </p>
+      @for (study of cards; track study.opponentLeadId) {
+        <article class="tw:border tw:border-base-300 tw:rounded-box tw:p-4 tw:flex tw:flex-col tw:gap-3">
+          <div
+            class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-x-4 tw:gap-y-2"
+          >
+            <h4 class="tw:m-0 tw:min-w-0">
+              {{ leadLabelForStudy(study) }}
+              <span class="tw:text-sm tw:font-normal tw:text-base-content/70">
+                — {{ previewPercent(study.phaseACount, study.phaseASampleSize) }} au preview
+              </span>
+            </h4>
+            <div
+              class="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:shrink-0 tw:rounded-box tw:border tw:border-base-300 tw:bg-base-200/50 tw:px-3 tw:py-2 tw:min-w-[11rem] tw:max-w-full [&_figcaption]:tw:hidden"
+              [attr.aria-label]="leadMatchupAriaLabel(study)"
+            >
+              <div class="tw:flex tw:items-center tw:gap-1">
+                @for (slot of rec.ourLeadSlots; track slot) {
+                  <app-pokemon-portrait [pokemon]="ours.pokemon[slot]" />
+                }
+              </div>
+              <span class="tw:text-sm tw:font-semibold tw:text-base-content/70 tw:px-1" aria-hidden="true"
+                >VS</span
+              >
+              <div class="tw:flex tw:items-center tw:gap-1">
+                @for (slot of study.opponentLeadSlots; track slot) {
+                  <app-pokemon-portrait [pokemon]="opponentTeam().pokemon[slot]" />
+                }
+              </div>
+            </div>
+          </div>
 
-    @for (leadId of studiedLeadIds(); track leadId) {
-      @if (!isStudied(leadId)) {
-        <p class="tw:text-sm tw:text-base-content/70">
-          {{ leadLabel(leadId) }} —
-          <span i18n="@@leadPick.notStudied">Non étudié dans cet exemple</span>
-        </p>
+          <section>
+            <h5 class="tw:m-0 tw:text-sm tw:font-semibold" i18n="@@leadPick.oppTurn1">
+              Tour 1 adverse possible
+            </h5>
+            @if (study.opponentPrimary; as primary) {
+              <p class="tw:text-sm tw:mt-2 tw:m-0">
+                <span class="tw:font-medium" i18n="@@leadPick.primary">Choix principal :</span>
+                {{ formatOppPair(study, primary) }}
+                <span class="tw:text-base-content/70">({{ freqLabel(primary) }})</span>
+              </p>
+            } @else {
+              <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">Aucune observation</p>
+            }
+            @if (study.opponentAlternatives.length) {
+              <details class="tw:mt-2">
+                <summary class="tw:text-sm" i18n="@@leadPick.oppAlternatives">
+                  Autres choix observés
+                </summary>
+                <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+                  @for (alt of study.opponentAlternatives; track $index) {
+                    <li>
+                      {{ formatOppPair(study, alt) }}
+                      <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
+                    </li>
+                  }
+                </ul>
+              </details>
+            }
+          </section>
+
+          <section>
+            <h5 class="tw:m-0 tw:text-sm tw:font-semibold" i18n="@@leadPick.ourTurn1">
+              Notre tour 1 recommandé
+            </h5>
+            @if (study.recommendation; as reco) {
+              <p class="tw:text-sm tw:mt-2 tw:m-0">
+                {{ formatOurPair(study, reco) }}
+                <span class="tw:text-base-content/70">({{ freqLabel(reco) }})</span>
+              </p>
+              <p class="tw:text-xs tw:text-base-content/60 tw:m-0" i18n="@@leadPick.recoHint">
+                Choix le plus fréquent du modèle pour cette confrontation.
+              </p>
+            } @else {
+              <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">Aucune observation</p>
+            }
+            @if (study.ourAlternatives.length) {
+              <details class="tw:mt-2">
+                <summary class="tw:text-sm" i18n="@@leadPick.ourAlternatives">
+                  Autres choix de notre modèle
+                </summary>
+                <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+                  @for (alt of study.ourAlternatives; track $index) {
+                    <li>
+                      {{ formatOurPair(study, alt) }}
+                      <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
+                    </li>
+                  }
+                </ul>
+              </details>
+            }
+          </section>
+
+          @if (study.endStateNotes.length) {
+            <details class="tw:text-sm">
+              <summary i18n="@@leadPick.endNotes">Observations de fin de tour</summary>
+              <ul class="tw:list-disc tw:pl-4 tw:mt-2">
+                @for (note of study.endStateNotes; track note) {
+                  <li>{{ note }}</li>
+                }
+              </ul>
+            </details>
+          }
+        </article>
       }
     }
 

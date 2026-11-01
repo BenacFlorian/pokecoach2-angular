@@ -5,105 +5,173 @@ import type {
   SelectionResult,
 } from '../models/matchup.model';
 import type { PokemonSlot } from '../models/team.model';
+import {
+  parseActionPairFrequency,
+  type ActionPairFrequencyDisplay,
+} from './battle-action-display';
 import type { RefinementSectionV2, SimulationResultV2 } from '../models/simulation-result.model';
+
+export interface OpeningStudyDisplay {
+  opponentLeadId: string;
+  opponentLeadSlots: readonly [PokemonSlot, PokemonSlot];
+  phaseACount: number;
+  phaseASampleSize: number;
+  sampleSize: number;
+  opponentActions: ActionPairFrequencyDisplay[];
+  ourActions: ActionPairFrequencyDisplay[];
+  recommendation: ActionPairFrequencyDisplay | null;
+  ourAlternatives: ActionPairFrequencyDisplay[];
+  opponentPrimary: ActionPairFrequencyDisplay | null;
+  opponentAlternatives: ActionPairFrequencyDisplay[];
+  endStateNotes: readonly string[];
+}
 
 export interface SimulationTabDisplay {
   opponentLeads: readonly OpponentLeadStats[] | null;
-  turn1Pending: boolean;
+  backsPending: boolean;
+  openings: readonly OpeningStudyDisplay[] | null;
+  openingsPending: boolean;
   leadRecommendation: LeadRecommendation | null;
   selectionComparisons: readonly SelectionResult[] | null;
-  studiedLeadIds: readonly string[];
   refinement: RefinementSectionV2 | null;
   gameplan: GameplanReport | null;
 }
 
-export function mapSimulationV2ToTabDisplay(
+export function mapSimulationToTabDisplay(
   partial: SimulationResultV2,
 ): SimulationTabDisplay {
-  const phaseB = partial.completedPhases.includes('B');
-  const phaseC = partial.completedPhases.includes('C');
-  const phaseD = partial.completedPhases.includes('D');
-  const phaseSynthesis = partial.completedPhases.includes('synthesis');
+  const hasC = partial.completedPhases.includes('C');
+  const hasB = partial.completedPhases.includes('B');
+  const hasD = partial.completedPhases.includes('D');
+  const hasSynthesis = partial.completedPhases.includes('synthesis');
+
+  const countById = new Map(
+    partial.opponentLeads?.leads.map((l) => [l.id, l.count]) ?? [],
+  );
 
   const opponentLeads = partial.opponentLeads
-    ? partial.opponentLeads.leads.map((lead) => mapLeadEntry(lead, partial.opponentLeads!.sampleSize, phaseB))
+    ? mapOpponentLeadsForTab(partial, hasB)
     : null;
 
   let leadRecommendation: LeadRecommendation | null = null;
   let selectionComparisons: readonly SelectionResult[] | null = null;
-  let studiedLeadIds: readonly string[] = [];
 
-  if (partial.leadPick) {
+  if (partial.leadPick && hasC) {
     leadRecommendation = mapLeadRecommendation(partial.leadPick);
     selectionComparisons = mapComparisons(partial.leadPick.comparisons);
-    studiedLeadIds = opponentLeads?.map((l) => l.id) ?? [];
-  } else if (opponentLeads) {
-    studiedLeadIds = opponentLeads.map((l) => l.id);
   }
 
+  const openings = hasB && partial.openings
+    ? mapOpenings(partial, countById)
+    : null;
+
   const gameplan =
-    phaseSynthesis && partial.gameplan && partial.winCondition
+    hasSynthesis && partial.gameplan && partial.winCondition
       ? mapGameplan(partial.gameplan, partial.winCondition, partial.leadPick?.limitations ?? [])
       : null;
 
   return {
     opponentLeads,
-    turn1Pending: Boolean(opponentLeads?.length) && !phaseB,
-    leadRecommendation: phaseC ? leadRecommendation : null,
-    selectionComparisons: phaseC ? selectionComparisons : null,
-    studiedLeadIds,
-    refinement: phaseD ? partial.refinement : null,
+    backsPending: Boolean(opponentLeads?.length) && !hasB,
+    openings,
+    openingsPending: hasC && !hasB,
+    leadRecommendation,
+    selectionComparisons,
+    refinement: hasD ? partial.refinement : null,
     gameplan,
   };
 }
 
-function mapLeadEntry(
-  lead: import('../models/simulation-result.model').OpponentLeadEntryV2,
-  phaseASampleSize: number,
-  phaseB: boolean,
-): OpponentLeadStats {
-  const leadSlots = lead.slots as readonly [PokemonSlot, PokemonSlot];
-  if (!phaseB || lead.turn1 === null) {
+function mapOpponentLeadsForTab(
+  partial: SimulationResultV2,
+  hasB: boolean,
+): OpponentLeadStats[] {
+  const section = partial.opponentLeads!;
+  const backsById = new Map<
+    string,
+    { backPairs: OpponentLeadStats['backPairs']; marginals: OpponentLeadStats['backSlotMarginals'] }
+  >();
+  if (hasB && partial.openings) {
+    for (const study of partial.openings.byOpponentLead) {
+      backsById.set(study.opponentLeadId, {
+        backPairs: mapPairFrequencyList(study.backPairs, study.sampleSize),
+        marginals: mapSlotFrequencyList(study.backSlotMarginals, study.sampleSize),
+      });
+    }
+  }
+  return section.leads.map((lead) => {
+    const leadSlots = lead.slots as readonly [PokemonSlot, PokemonSlot];
+    const backs = backsById.get(lead.id);
     return {
       id: lead.id,
       leadSlots,
-      phaseASampleSize,
+      phaseASampleSize: section.sampleSize,
       phaseACount: lead.count,
       jointTurn1Actions: [],
-      backPairs: [],
-      backSlotMarginals: [],
+      backPairs: backs?.backPairs ?? [],
+      backSlotMarginals: backs?.marginals ?? [],
       turn1EndObservations: [],
     };
-  }
-  return {
-    id: lead.id,
-    leadSlots,
-    phaseASampleSize,
-    phaseACount: lead.count,
-    jointTurn1Actions: mapFrequencyList(lead.turn1.jointActions, lead.turn1.sampleSize),
-    backPairs: mapPairFrequencyList(lead.turn1.backPairs, lead.turn1.sampleSize),
-    backSlotMarginals: mapSlotFrequencyList(lead.turn1.backSlotMarginals, lead.turn1.sampleSize),
-    turn1EndObservations: lead.turn1.endStateNotes,
-  };
+  });
 }
 
-function mapFrequencyList(raw: unknown[], sampleSize: number): OpponentLeadStats['jointTurn1Actions'] {
-  const out: OpponentLeadStats['jointTurn1Actions'][number][] = [];
+function mapOpenings(
+  partial: SimulationResultV2,
+  countById: Map<string, number>,
+): OpeningStudyDisplay[] {
+  const section = partial.opponentLeads!;
+  const studyById = new Map(
+    partial.openings!.byOpponentLead.map((s) => [s.opponentLeadId, s]),
+  );
+  const sorted = [...section.leads].sort((a, b) => {
+    if (b.count !== a.count) {
+      return b.count - a.count;
+    }
+    return a.id.localeCompare(b.id);
+  });
+  return sorted.map((lead) => {
+    const study = studyById.get(lead.id);
+    if (!study) {
+      throw new Error(`missing opening study for lead ${lead.id}`);
+    }
+    const ourActions = mapActionPairFrequencies(study.ourActions);
+    const opponentActions = mapActionPairFrequencies(study.opponentActions);
+    const recommendation = parseActionPairFrequency(study.recommendation);
+    const ourAlternatives = recommendation
+      ? ourActions.filter(
+          (row) =>
+            row.count !== recommendation.count ||
+            JSON.stringify(row.value) !== JSON.stringify(recommendation.value),
+        )
+      : ourActions.slice(1);
+    const opponentPrimary = opponentActions[0] ?? null;
+    const opponentAlternatives = opponentActions.slice(1);
+    return {
+      opponentLeadId: lead.id,
+      opponentLeadSlots: lead.slots as readonly [PokemonSlot, PokemonSlot],
+      phaseACount: countById.get(lead.id) ?? lead.count,
+      phaseASampleSize: section.sampleSize,
+      sampleSize: study.sampleSize,
+      opponentActions,
+      ourActions,
+      recommendation,
+      ourAlternatives,
+      opponentPrimary,
+      opponentAlternatives,
+      endStateNotes: study.endStateNotes,
+    };
+  });
+}
+
+function mapActionPairFrequencies(raw: unknown[]): ActionPairFrequencyDisplay[] {
+  const out: ActionPairFrequencyDisplay[] = [];
   for (const entry of raw) {
-    if (typeof entry !== 'object' || entry === null) {
-      continue;
+    const parsed = parseActionPairFrequency(entry);
+    if (parsed) {
+      out.push(parsed);
     }
-    const obj = entry as Record<string, unknown>;
-    if (typeof obj['count'] !== 'number' || obj['value'] === undefined) {
-      continue;
-    }
-    out.push({
-      value: obj['value'] as OpponentLeadStats['jointTurn1Actions'][number]['value'],
-      count: obj['count'],
-      sampleSize: typeof obj['sampleSize'] === 'number' ? obj['sampleSize'] : sampleSize,
-    });
   }
-  return out;
+  return out.sort((a, b) => b.count - a.count || b.sampleSize - a.sampleSize);
 }
 
 function mapPairFrequencyList(
@@ -177,7 +245,7 @@ function mapLeadRecommendation(
     ourLeadSlots: sel.ourLeadSlots as LeadRecommendation['ourLeadSlots'],
     justification: section.limitations.join(' ') || 'Sélection calculée par simulation.',
     selectionResults: mapComparisons(section.comparisons),
-    studiedLeads: mapStudiedLeads(section.firstTurns),
+    studiedLeads: [],
   };
 }
 
@@ -211,36 +279,6 @@ function mapComparisons(raw: unknown[]): readonly SelectionResult[] {
       losses,
       draws,
       sampleSize,
-    });
-  }
-  return out;
-}
-
-function mapStudiedLeads(
-  raw: unknown[],
-): LeadRecommendation['studiedLeads'] {
-  const out: LeadRecommendation['studiedLeads'][number][] = [];
-  for (const entry of raw) {
-    if (typeof entry !== 'object' || entry === null) {
-      continue;
-    }
-    const obj = entry as Record<string, unknown>;
-    if (typeof obj['opponentLeadId'] !== 'string') {
-      continue;
-    }
-    const actions = Array.isArray(obj['primaryActions']) ? obj['primaryActions'] : [];
-    const alternatives = Array.isArray(obj['alternatives'])
-      ? obj['alternatives'].filter((a): a is string => typeof a === 'string')
-      : [];
-    const adaptations = Array.isArray(obj['adaptations'])
-      ? obj['adaptations'].filter((a): a is string => typeof a === 'string')
-      : [];
-    out.push({
-      opponentLeadId: obj['opponentLeadId'],
-      primaryActions:
-        actions as unknown as LeadRecommendation['studiedLeads'][number]['primaryActions'],
-      alternatives,
-      adaptations,
     });
   }
   return out;

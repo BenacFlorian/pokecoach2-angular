@@ -1,10 +1,18 @@
 <header class="tw:navbar tw:bg-base-100 tw:border-b tw:border-base-300 tw:shrink-0">
-  <div class="tw:navbar-start">
+  <div class="tw:navbar-start tw:gap-0">
     <a
       routerLink="/"
       class="tw:btn tw:btn-ghost tw:text-lg tw:font-semibold"
       i18n="@@app.brand"
       >pokecoach</a
     >
+    @if (teamBackId(); as teamId) {
+      <a
+        [routerLink]="['/teams', teamId]"
+        class="tw:btn tw:btn-ghost tw:btn-sm tw:font-normal"
+        i18n="@@matchup.backTeamLink"
+        >← Notre équipe</a
+      >
+    }
   </div>
 </header>

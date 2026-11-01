@@ -2,7 +2,7 @@ import type { MatchupReport } from '../models/matchup.model';
 import type { RunProgressJson, SimulationResultV2 } from '../models/simulation-result.model';
 import type { PokemonSet, PokemonSlot, Team, TeamSource } from '../models/team.model';
 import { pokemonTuple } from '../models/team.model';
-import { mapSimulationV2ToTabDisplay, type SimulationTabDisplay } from '../matchup/simulation-v2-display';
+import { mapSimulationToTabDisplay, type SimulationTabDisplay } from '../matchup/simulation-display';
 import { validateSimulationResult } from './simulation-result-validator';
 import type { GqlRunDetailNode, GqlRunNode, GqlTeamNode } from './coach-dto';
 
@@ -32,6 +32,7 @@ export interface RunSummary {
   createdAt: string;
   finishedAt: string | null;
   targetPhase: string | null;
+  progress: RunProgress | null;
 }
 
 export interface RunResult {
@@ -149,6 +150,7 @@ export function mapRunSummary(node: GqlRunNode | null | undefined): RunSummary |
     createdAt: node.createdAt,
     finishedAt: node.finishedAt,
     targetPhase: node.targetPhase ?? null,
+    progress: mapRunProgress(node.progress),
   };
 }
 
@@ -525,6 +527,52 @@ export function mapRunProgress(raw: unknown): RunProgress | null {
   return { phase: obj.phase, completed: obj.completed, total: obj.total };
 }
 
+/** Human-readable in-flight progress (phase counter + optional checkpoint phases). */
+export function formatAnalysisProgressMessage(input: {
+  run: RunSummary;
+  progress?: RunProgress | null;
+  completedPhases?: readonly string[];
+  resultRevision?: number;
+  targetPhase?: string | null;
+  phaseLabel?: (phase: string) => string;
+}): string | null {
+  const { run } = input;
+  const progress = input.progress ?? run.progress;
+  const label = input.phaseLabel ?? ((p: string) => p);
+  const active =
+    run.status === 'queued' ||
+    run.status === 'running' ||
+    (run.status === 'paused' && progress !== null);
+
+  if (!active && !input.completedPhases?.length) {
+    return null;
+  }
+
+  const parts: string[] = [];
+  if (progress && progress.total > 0) {
+    const pct = Math.round((progress.completed / progress.total) * 100);
+    parts.push(
+      `${label(progress.phase)} : ${progress.completed}/${progress.total} (${pct} %)`,
+    );
+  } else if (run.status === 'queued') {
+    parts.push('En attente de démarrage');
+  } else if (run.status === 'running') {
+    parts.push('Analyse en cours…');
+  }
+
+  if (input.completedPhases?.length) {
+    parts.push(`Phases terminées : ${input.completedPhases.join(', ')}`);
+  }
+  if (input.resultRevision !== undefined) {
+    parts.push(`révision ${input.resultRevision}`);
+  }
+  const target = input.targetPhase ?? run.targetPhase;
+  if (target) {
+    parts.push(`cible ${target}`);
+  }
+  return parts.join(' · ');
+}
+
 export function mapSimulationRunView(
   node: GqlRunDetailNode | null | undefined,
   expectedMatchupId: string,
@@ -590,7 +638,7 @@ export function mapSimulationRunView(
         executionMetadata: node.executionMetadata ?? {},
         ourTeamSnapshot,
         opponentTeamSnapshot,
-        tabDisplay: mapSimulationV2ToTabDisplay(validated.value),
+        tabDisplay: mapSimulationToTabDisplay(validated.value),
         provenance: node.provenance ?? {},
       },
     };

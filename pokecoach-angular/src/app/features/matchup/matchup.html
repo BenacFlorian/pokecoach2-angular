@@ -18,18 +18,6 @@
       >
     </div>
   } @else {
-    <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-      <a
-        [routerLink]="['/teams', teamId()]"
-        class="tw:btn tw:btn-ghost tw:w-fit"
-        i18n="@@matchup.backTeamLink"
-        >← Notre équipe</a
-      >
-      <button type="button" class="tw:btn tw:btn-ghost tw:btn-sm" (click)="refresh()">
-        Rafraîchir
-      </button>
-    </div>
-
     <div
       class="tw:flex tw:flex-col tw:gap-4 tw:w-full tw:lg:flex-row tw:lg:justify-between tw:lg:items-center tw:bg-base-100 tw:border tw:border-base-300 tw:rounded-box tw:p-4"
     >
@@ -64,6 +52,15 @@
 
     @if (latestRunMessage(); as statusMsg) {
       <p class="tw:text-sm tw:text-base-content/80 tw:m-0" role="status">{{ statusMsg }}</p>
+    }
+    @if (analysisProgressBar(); as bar) {
+      <div class="tw:flex tw:flex-col tw:gap-1 tw:max-w-md" role="status" aria-live="polite">
+        <progress
+          class="tw:progress tw:progress-primary tw:w-full"
+          [value]="bar.completed"
+          [max]="bar.total"
+        ></progress>
+      </div>
     }
     @if (progressHint(); as hint) {
       <p class="tw:text-xs tw:text-base-content/60 tw:m-0" role="status">{{ hint }}</p>
@@ -133,7 +130,7 @@
               [ourTeam]="ours"
               [opponentTeam]="opponent"
               [leads]="leads ?? null"
-              [turn1Pending]="turn1Pending()"
+              [backsPending]="backsPending()"
               [selectedLeadId]="selectedLeadId()"
               (selectedLeadIdChange)="selectedLeadId.set($event)"
             />
@@ -152,7 +149,8 @@
               [opponentLeads]="leads ?? null"
               [recommendation]="leadRecommendationForTab()"
               [selections]="selectionsForTab()"
-              [studiedLeadIds]="studiedLeadIds()"
+              [openings]="openingsForTab()"
+              [openingsPending]="openingsPendingForTab()"
               [provenanceNote]="provenanceLabel()"
               [refinement]="refinementForTab()"
             />

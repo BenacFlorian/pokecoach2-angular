@@ -1,9 +1,10 @@
 import type {
+  LeadSelectionV2,
   SimulationPhase,
   SimulationResultV2,
 } from '../models/simulation-result.model';
 
-const PHASE_ORDER: SimulationPhase[] = ['A', 'B', 'C', 'D', 'synthesis'];
+const PHASE_ORDER: SimulationPhase[] = ['A', 'C', 'B', 'D', 'synthesis'];
 
 export type ValidateResultOutcome =
   | { ok: true; value: SimulationResultV2 }
@@ -56,6 +57,10 @@ function parseEnvelope(payload: unknown): ValidateResultOutcome {
   if (!leadPick.ok) {
     return leadPick;
   }
+  const openings = parseOpeningsSection(obj['openings']);
+  if (!openings.ok) {
+    return openings;
+  }
   const refinement = parseRefinementSection(obj['refinement']);
   if (!refinement.ok) {
     return refinement;
@@ -74,12 +79,21 @@ function parseEnvelope(payload: unknown): ValidateResultOutcome {
     n,
     opponentLeads.value,
     leadPick.value,
+    openings.value,
     refinement.value,
     gameplan.value,
     winCondition.value,
   );
   if (phaseErr) {
     return { ok: false, message: phaseErr };
+  }
+
+  if (
+    openings.value !== null &&
+    leadPick.value !== null &&
+    !selectionEqual(openings.value.selection, leadPick.value.selection)
+  ) {
+    return { ok: false, message: 'openings.selection must match leadPick.selection' };
   }
 
   return {
@@ -90,6 +104,7 @@ function parseEnvelope(payload: unknown): ValidateResultOutcome {
       completedPhases: phases.value,
       opponentLeads: opponentLeads.value,
       leadPick: leadPick.value,
+      openings: openings.value,
       refinement: refinement.value,
       gameplan: gameplan.value,
       winCondition: winCondition.value,
@@ -103,6 +118,7 @@ const ROOT_KEYS = new Set([
   'completedPhases',
   'opponentLeads',
   'leadPick',
+  'openings',
   'refinement',
   'gameplan',
   'winCondition',
@@ -114,21 +130,29 @@ function parsePhases(raw: unknown): ParseResult<SimulationPhase[]> {
   }
   const phases: SimulationPhase[] = [];
   for (const entry of raw) {
-    if (entry !== 'A' && entry !== 'B' && entry !== 'C' && entry !== 'D' && entry !== 'synthesis') {
+    if (entry !== 'A' && entry !== 'C' && entry !== 'B' && entry !== 'D' && entry !== 'synthesis') {
       return { ok: false, message: 'invalid phase in completedPhases' };
     }
     phases.push(entry);
   }
   if (phases.join(',') !== PHASE_ORDER.slice(0, phases.length).join(',')) {
-    return { ok: false, message: 'completedPhases must be a strict prefix of A,B,C,D,synthesis' };
+    return { ok: false, message: 'completedPhases must be a strict prefix of A,C,B,D,synthesis' };
   }
   return { ok: true, value: phases };
+}
+
+function selectionEqual(a: LeadSelectionV2, b: LeadSelectionV2): boolean {
+  return (
+    a.ourFourSlots.join(',') === b.ourFourSlots.join(',') &&
+    a.ourLeadSlots.join(',') === b.ourLeadSlots.join(',')
+  );
 }
 
 function checkPhaseSectionRules(
   n: number,
   opponentLeads: SimulationResultV2['opponentLeads'],
   leadPick: SimulationResultV2['leadPick'],
+  openings: SimulationResultV2['openings'],
   refinement: SimulationResultV2['refinement'],
   gameplan: SimulationResultV2['gameplan'],
   winCondition: SimulationResultV2['winCondition'],
@@ -139,11 +163,17 @@ function checkPhaseSectionRules(
   if (n < 1 && opponentLeads !== null) {
     return 'opponentLeads forbidden before phase A';
   }
-  if (n >= 3 && leadPick === null) {
+  if (n >= 2 && leadPick === null) {
     return 'leadPick required after phase C';
   }
-  if (n < 3 && leadPick !== null) {
+  if (n < 2 && leadPick !== null) {
     return 'leadPick forbidden before phase C';
+  }
+  if (n >= 3 && openings === null) {
+    return 'openings required after phase B';
+  }
+  if (n < 3 && openings !== null) {
+    return 'openings forbidden before phase B';
   }
   if (n >= 4 && refinement === null) {
     return 'refinement required after phase D';
@@ -201,6 +231,9 @@ function parseLeadEntry(
   if (typeof obj['id'] !== 'string') {
     return { ok: false, message: 'lead id required' };
   }
+  if ('turn1' in obj) {
+    return { ok: false, message: 'opponent lead turn1 is not part of the contract' };
+  }
   const slots = obj['slots'];
   if (!Array.isArray(slots) || slots.length !== 2) {
     return { ok: false, message: 'lead slots must be a pair' };
@@ -213,53 +246,9 @@ function parseLeadEntry(
   if (typeof obj['count'] !== 'number' || obj['count'] < 0) {
     return { ok: false, message: 'lead count invalid' };
   }
-  const turn1Raw = obj['turn1'];
-  if (turn1Raw === null) {
-    return {
-      ok: true,
-      value: { id: obj['id'], slots: [a, b] as [number, number], count: obj['count'], turn1: null },
-    };
-  }
-  const turn1 = parseTurn1(turn1Raw);
-  if (!turn1.ok) {
-    return turn1;
-  }
   return {
     ok: true,
-    value: {
-      id: obj['id'],
-      slots: [a, b] as [number, number],
-      count: obj['count'],
-      turn1: turn1.value,
-    },
-  };
-}
-
-function parseTurn1(
-  raw: unknown,
-): ParseResult<import('../models/simulation-result.model').Turn1SectionV2> {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
-    return { ok: false, message: 'turn1 must be an object' };
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj['sampleSize'] !== 'number' || obj['sampleSize'] < 0) {
-    return { ok: false, message: 'turn1.sampleSize invalid' };
-  }
-  if (!Array.isArray(obj['jointActions']) || !Array.isArray(obj['backPairs']) || !Array.isArray(obj['backSlotMarginals'])) {
-    return { ok: false, message: 'turn1 arrays invalid' };
-  }
-  if (!Array.isArray(obj['endStateNotes']) || !obj['endStateNotes'].every((n) => typeof n === 'string')) {
-    return { ok: false, message: 'turn1.endStateNotes invalid' };
-  }
-  return {
-    ok: true,
-    value: {
-      sampleSize: obj['sampleSize'],
-      jointActions: obj['jointActions'],
-      backPairs: obj['backPairs'],
-      backSlotMarginals: obj['backSlotMarginals'],
-      endStateNotes: obj['endStateNotes'] as string[],
-    },
+    value: { id: obj['id'], slots: [a, b] as [number, number], count: obj['count'] },
   };
 }
 
@@ -273,12 +262,15 @@ function parseLeadPickSection(
     return { ok: false, message: 'leadPick must be an object or null' };
   }
   const obj = raw as Record<string, unknown>;
+  if ('firstTurns' in obj) {
+    return { ok: false, message: 'leadPick.firstTurns is not part of the contract' };
+  }
   const selection = parseSelection(obj['selection']);
   if (!selection.ok) {
     return selection;
   }
-  if (!Array.isArray(obj['comparisons']) || !Array.isArray(obj['firstTurns'])) {
-    return { ok: false, message: 'leadPick comparisons/firstTurns must be arrays' };
+  if (!Array.isArray(obj['comparisons'])) {
+    return { ok: false, message: 'leadPick comparisons must be an array' };
   }
   if (typeof obj['selectionRuleVersion'] !== 'string') {
     return { ok: false, message: 'selectionRuleVersion required' };
@@ -291,16 +283,90 @@ function parseLeadPickSection(
     value: {
       selection: selection.value,
       comparisons: obj['comparisons'],
-      firstTurns: obj['firstTurns'],
       selectionRuleVersion: obj['selectionRuleVersion'],
       limitations: obj['limitations'] as string[],
     },
   };
 }
 
-function parseSelection(
+function parseOpeningsSection(
   raw: unknown,
-): ParseResult<import('../models/simulation-result.model').LeadSelectionV2> {
+): ParseResult<SimulationResultV2['openings']> {
+  if (raw === null) {
+    return { ok: true, value: null };
+  }
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, message: 'openings must be an object or null' };
+  }
+  const obj = raw as Record<string, unknown>;
+  if (obj['recommendationRule'] !== 'model-frequency-v1') {
+    return { ok: false, message: 'openings.recommendationRule invalid' };
+  }
+  if (typeof obj['samplingPolicy'] !== 'string') {
+    return { ok: false, message: 'openings.samplingPolicy required' };
+  }
+  const selection = parseSelection(obj['selection']);
+  if (!selection.ok) {
+    return { ok: false, message: 'openings.selection invalid' };
+  }
+  if (!Array.isArray(obj['byOpponentLead'])) {
+    return { ok: false, message: 'openings.byOpponentLead must be an array' };
+  }
+  const studies = [];
+  for (const entry of obj['byOpponentLead']) {
+    if (typeof entry !== 'object' || entry === null) {
+      return { ok: false, message: 'opening study entry invalid' };
+    }
+    const e = entry as Record<string, unknown>;
+    if (typeof e['opponentLeadId'] !== 'string') {
+      return { ok: false, message: 'opponentLeadId required' };
+    }
+    const slots = e['opponentLeadSlots'];
+    if (!Array.isArray(slots) || slots.length !== 2) {
+      return { ok: false, message: 'opponentLeadSlots invalid' };
+    }
+    if (typeof e['sampleSize'] !== 'number' || e['sampleSize'] < 0) {
+      return { ok: false, message: 'opening sampleSize invalid' };
+    }
+    if (!Array.isArray(e['opponentActions']) || !Array.isArray(e['ourActions'])) {
+      return { ok: false, message: 'opening action arrays invalid' };
+    }
+    if (typeof e['recommendation'] !== 'object' || e['recommendation'] === null) {
+      return { ok: false, message: 'opening recommendation required' };
+    }
+    if (!Array.isArray(e['backPairs']) || !Array.isArray(e['backSlotMarginals'])) {
+      return { ok: false, message: 'opening back arrays invalid' };
+    }
+    if (
+      !Array.isArray(e['endStateNotes']) ||
+      !e['endStateNotes'].every((n) => typeof n === 'string')
+    ) {
+      return { ok: false, message: 'endStateNotes invalid' };
+    }
+    studies.push({
+      opponentLeadId: e['opponentLeadId'],
+      opponentLeadSlots: [slots[0], slots[1]] as [number, number],
+      sampleSize: e['sampleSize'],
+      opponentActions: e['opponentActions'],
+      ourActions: e['ourActions'],
+      recommendation: e['recommendation'] as Record<string, unknown>,
+      backPairs: e['backPairs'],
+      backSlotMarginals: e['backSlotMarginals'],
+      endStateNotes: e['endStateNotes'] as string[],
+    });
+  }
+  return {
+    ok: true,
+    value: {
+      selection: selection.value,
+      recommendationRule: 'model-frequency-v1',
+      samplingPolicy: obj['samplingPolicy'],
+      byOpponentLead: studies,
+    },
+  };
+}
+
+function parseSelection(raw: unknown): ParseResult<LeadSelectionV2> {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     return { ok: false, message: 'selection must be an object' };
   }
@@ -426,3 +492,6 @@ function parseWinConditionSection(
     },
   };
 }
+
+// re-export for tests
+export { PHASE_ORDER as SIMULATION_PHASE_ORDER_VALIDATOR };

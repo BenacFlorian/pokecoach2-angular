@@ -31,25 +31,20 @@
 
   @if (activeLead(); as active) {
     <div class="tw:flex tw:flex-col tw:gap-4">
-      @if (turn1Pending()) {
-        <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+      @if (backsPending()) {
+        <p class="tw:text-base-content/70 tw:m-0" i18n="@@opponentLeads.backsPending">
+          Les backs adverses seront observés à l’étape des ouvertures (face à notre sélection recommandée).
+        </p>
       } @else {
-      <section class="tw:flex tw:flex-col tw:gap-2">
-        <h3 class="tw:m-0" i18n="@@opponentLeads.turn1Title">Actions conjointes tour 1</h3>
-        <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
-          @for (joint of sortedJointActions(); track $index) {
-            <li
-              class="tw:border tw:border-base-300 tw:rounded-box tw:p-3 tw:flex tw:flex-wrap tw:gap-2 tw:justify-between"
-            >
-              <span class="tw:text-sm">{{ formatJoint(joint) }}</span>
-              <span class="tw:font-medium tw:shrink-0">{{ freqPercent(joint) }}</span>
-            </li>
-          }
-        </ul>
-      </section>
+      <p class="tw:text-sm tw:text-base-content/80 tw:m-0" i18n="@@opponentLeads.backsContext">
+        Back observé face à notre sélection recommandée (phase B).
+      </p>
 
       <section class="tw:flex tw:flex-col tw:gap-2">
         <h3 class="tw:m-0" i18n="@@opponentLeads.backTitle">Paires de back</h3>
+        @if (sortedBackPairs().length === 0) {
+          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">Aucune observation</p>
+        } @else {
         <div
           class="tw:flex tw:flex-row tw:w-full tw:gap-2 tw:items-center tw:border tw:border-base-300 tw:rounded-box tw:p-3"
           role="list"
@@ -65,11 +60,15 @@
             </div>
           }
         </div>
+        }
       </section>
 
       @if (sortedBackMarginals().length) {
         <section class="tw:flex tw:flex-col tw:gap-2">
           <h3 class="tw:m-0" i18n="@@opponentLeads.backMarginalsTitle">Présence individuelle au back</h3>
+          <p class="tw:text-xs tw:text-base-content/60 tw:m-0" i18n="@@opponentLeads.marginalHint">
+            Présences non exclusives (deux slots comptés par paire observée).
+          </p>
           <div
             class="tw:flex tw:flex-row tw:w-full tw:gap-2 tw:items-center tw:border tw:border-base-300 tw:rounded-box tw:p-3"
             role="list"
@@ -87,17 +86,6 @@
             }
           </div>
         </section>
-      }
-
-      @if (active.turn1EndObservations.length) {
-        <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-3">
-          <summary i18n="@@opponentLeads.observations">Observations fin de tour 1</summary>
-          <ul class="tw:text-sm tw:mt-2 tw:list-disc tw:pl-4">
-            @for (obs of active.turn1EndObservations; track obs) {
-              <li>{{ obs }}</li>
-            }
-          </ul>
-        </details>
       }
       }
     </div>

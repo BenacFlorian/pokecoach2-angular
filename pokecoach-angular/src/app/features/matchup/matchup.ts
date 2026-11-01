@@ -10,8 +10,10 @@ import { RouterLink } from '@angular/router';
 import { CoachStore } from '../../core/data/coach-store';
 import {
   activeRunStatusMessage,
+  formatAnalysisProgressMessage,
   runProvenanceBadge,
   shouldPollRun,
+  type RunProgress,
   type RunResult,
   type SelectedRunView,
 } from '../../core/graphql/coach-mappers';
@@ -22,7 +24,10 @@ import type {
   SelectionResult,
 } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
-import type { AnalysisCapabilitiesView } from '../../core/python/analysis-api.models';
+import {
+  type AnalysisCapabilitiesView,
+  phaseProgressLabel,
+} from '../../core/python/analysis-api.models';
 import { AnalysisApi } from '../../core/python/analysis-api';
 import { AnalysisControls } from './analysis-controls';
 import { GameplanTab } from './gameplan';
@@ -229,10 +234,26 @@ export class Matchup {
     return result?.report.opponentLeads;
   }
 
-  turn1Pending(): boolean {
+  backsPending(): boolean {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
-      return view.view.tabDisplay.turn1Pending;
+      return view.view.tabDisplay.backsPending;
+    }
+    return false;
+  }
+
+  openingsForTab(): readonly import('../../core/matchup/simulation-display').OpeningStudyDisplay[] | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.openings;
+    }
+    return null;
+  }
+
+  openingsPendingForTab(): boolean {
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.tabDisplay.openingsPending;
     }
     return false;
   }
@@ -269,35 +290,48 @@ export class Matchup {
     return this.runResult()?.report.gameplan ?? null;
   }
 
-  studiedLeadIds(): string[] {
-    const view = this.selectedRunView();
-    if (view?.kind === 'simulation') {
-      return [...view.view.tabDisplay.studiedLeadIds];
-    }
-    return (
-      this.runResult()?.report.leadRecommendation.studiedLeads.map(
-        (s) => s.opponentLeadId,
-      ) ?? []
-    );
-  }
-
   progressHint(): string | null {
-    const view = this.selectedRunView();
-    if (view?.kind !== 'simulation') {
+    const run = this.selectedRunSummary();
+    if (!run) {
       return null;
     }
-    const { progress, partialResult, resultRevision, targetPhase } = view.view;
-    const phases = partialResult.completedPhases.join(', ') || '—';
-    const partial =
-      partialResult.completedPhases.length < 5 ? ' (partiel)' : '';
-    let line = `Phases : ${phases}${partial} · révision ${resultRevision}`;
-    if (targetPhase) {
-      line += ` · cible ${targetPhase}`;
+    const view = this.selectedRunView();
+    let progress: RunProgress | null = run.progress;
+    let completedPhases: readonly string[] | undefined;
+    let resultRevision: number | undefined;
+    let targetPhase = run.targetPhase;
+
+    if (view?.kind === 'simulation') {
+      progress = view.view.progress ?? progress;
+      completedPhases = view.view.partialResult.completedPhases;
+      resultRevision = view.view.resultRevision;
+      targetPhase = view.view.targetPhase ?? targetPhase;
     }
-    if (progress) {
-      line += ` · ${progress.phase} ${progress.completed}/${progress.total}`;
+
+    return formatAnalysisProgressMessage({
+      run,
+      progress,
+      completedPhases,
+      resultRevision,
+      targetPhase,
+      phaseLabel: phaseProgressLabel,
+    });
+  }
+
+  analysisProgressBar(): RunProgress | null {
+    const run = this.selectedRunSummary();
+    if (!run || (run.status !== 'queued' && run.status !== 'running')) {
+      return null;
     }
-    return line;
+    const view = this.selectedRunView();
+    const progress =
+      view?.kind === 'simulation'
+        ? (view.view.progress ?? run.progress)
+        : run.progress;
+    if (!progress || progress.total <= 0) {
+      return null;
+    }
+    return progress;
   }
 
   latestRunMessage(): string | null {

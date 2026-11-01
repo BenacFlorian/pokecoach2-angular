@@ -11,7 +11,9 @@ import {
 import type { GqlRunDetailNode, GqlTeamNode } from './coach-dto';
 import {
   activeRunStatusMessage,
+  formatAnalysisProgressMessage,
   mapPokemonJson,
+  mapRunSummary,
   mapSimulationRunView,
   mapTeamNode,
   pokemonSetToDbJson,
@@ -25,10 +27,6 @@ const EXAMPLES_DIR = join(process.cwd(), '../../pokecoach2-python/contracts/exam
 const MATCHUP_ID = 'c3333333-3333-4333-8333-333333333301';
 const RUN_ID = 'd4444444-4444-4444-8444-444444444401';
 
-function loadExample(name: string): unknown {
-  return JSON.parse(readFileSync(join(EXAMPLES_DIR, name), 'utf-8'));
-}
-
 function baseRunNode(partial: Partial<GqlRunDetailNode>): GqlRunDetailNode {
   return {
     id: RUN_ID,
@@ -41,7 +39,9 @@ function baseRunNode(partial: Partial<GqlRunDetailNode>): GqlRunDetailNode {
     opponentTeamSnapshot: opponentSnapshotJson(),
     createdAt: '2026-01-01T00:00:00Z',
     finishedAt: null,
-    partialResult: loadExample('simulation-empty.json'),
+    partialResult: JSON.parse(
+      readFileSync(join(EXAMPLES_DIR, 'openings', 'empty.json'), 'utf-8'),
+    ),
     resultRevision: 0,
     progress: { phase: 'A', completed: 0, total: 1000 },
     targetPhase: 'A',
@@ -116,23 +116,54 @@ describe('coach mappers', () => {
     const report = buildMockMatchupReport(ours, opp);
     expect(report.source).toBe('mock');
   });
+  it('maps run progress from matchup list payload', () => {
+    const summary = mapRunSummary({
+      id: RUN_ID,
+      status: 'running',
+      processStatus: 'PENDING_GAME_SIMULATIONS',
+      source: 'simulation',
+      reportVersion: 2,
+      report: null,
+      ourTeamSnapshot: null,
+      opponentTeamSnapshot: null,
+      createdAt: '2026-01-01T00:00:00Z',
+      finishedAt: null,
+      targetPhase: 'B',
+      progress: { phase: 'B', completed: 3, total: 10 },
+    });
+    expect(summary?.progress).toEqual({ phase: 'B', completed: 3, total: 10 });
+  });
+});
+
+describe('formatAnalysisProgressMessage', () => {
+  it('formats phase counter while running', () => {
+    const msg = formatAnalysisProgressMessage({
+      run: {
+        id: RUN_ID,
+        status: 'running',
+        processStatus: 'PENDING_GAME_SIMULATIONS',
+        source: 'simulation',
+        createdAt: '',
+        finishedAt: null,
+        targetPhase: 'B',
+        progress: { phase: 'C', completed: 2, total: 8 },
+      },
+      phaseLabel: (p) => (p === 'C' ? 'Sélection' : p),
+    });
+    expect(msg).toContain('2/8');
+    expect(msg).toContain('Sélection');
+  });
 });
 
 describe('mapSimulationRunView', () => {
-  const examples = [
-    'simulation-empty.json',
-    'simulation-a.json',
-    'simulation-ab.json',
-    'simulation-abc.json',
-    'simulation-abcd.json',
-    'simulation-complete.json',
-  ] as const;
+  const OPENINGS_DIR = join(EXAMPLES_DIR, 'openings');
+  const examples = ['empty.json', 'a.json', 'ac.json', 'acb.json', 'acbd.json'] as const;
 
-  it.each(examples)('maps contract example %s', (file) => {
+  it.each(examples)('maps contract example openings/%s', (file) => {
     const node = baseRunNode({
-      partialResult: loadExample(file),
-      resultRevision: file === 'simulation-complete.json' ? 5 : 1,
-      status: file === 'simulation-complete.json' ? 'succeeded' : 'paused',
+      partialResult: JSON.parse(readFileSync(join(OPENINGS_DIR, file), 'utf-8')),
+      resultRevision: file === 'acbd.json' ? 5 : 1,
+      status: file === 'acbd.json' ? 'succeeded' : 'paused',
     });
     const view = mapSimulationRunView(node, MATCHUP_ID);
     expect(view.kind).toBe('simulation');
@@ -200,6 +231,7 @@ describe('run status helpers', () => {
         createdAt: '',
         finishedAt: null,
         targetPhase: 'A',
+        progress: null,
       }),
     ).toBe(false);
     expect(
@@ -211,6 +243,7 @@ describe('run status helpers', () => {
         createdAt: '',
         finishedAt: null,
         targetPhase: 'A',
+        progress: null,
       }),
     ).toBe(true);
   });
@@ -224,6 +257,7 @@ describe('run status helpers', () => {
       createdAt: '',
       finishedAt: null,
       targetPhase: 'A',
+      progress: null,
     });
     expect(msg).toContain('pause');
     expect(msg).toContain('A');

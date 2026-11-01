@@ -1,14 +1,16 @@
 import { Component, input } from '@angular/core';
-import type {
-  BattleAction,
-  LeadRecommendation,
-  OpponentLeadStats,
-  SelectionResult,
-} from '../../core/models/matchup.model';
+import type { LeadRecommendation, SelectionResult } from '../../core/models/matchup.model';
 import type { RefinementSectionV2 } from '../../core/models/simulation-result.model';
 import type { PokemonSlot, Team } from '../../core/models/team.model';
+import type { OpeningStudyDisplay } from '../../core/matchup/simulation-display';
+import {
+  formatActionPair,
+  formatBattleAction,
+  formatFrequencyLabel,
+} from '../../core/matchup/battle-action-display';
 import {
   formatPercent,
+  formatOpponentLeadLabel,
   opponentLeadLabelById,
 } from '../../core/matchup/matchup-display';
 import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
@@ -21,14 +23,14 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
 export class LeadPick {
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
-  readonly opponentLeads = input<readonly OpponentLeadStats[] | null>(null);
+  readonly opponentLeads = input<readonly import('../../core/models/matchup.model').OpponentLeadStats[] | null>(null);
   readonly recommendation = input<LeadRecommendation | null>(null);
   readonly selections = input<readonly SelectionResult[] | null>(null);
-  readonly studiedLeadIds = input.required<readonly string[]>();
+  readonly openings = input<readonly OpeningStudyDisplay[] | null>(null);
+  readonly openingsPending = input(false);
   readonly provenanceNote = input<string | null>(null);
   readonly refinement = input<RefinementSectionV2 | null>(null);
 
-  /** Lead pair first, then back pair (stable slot order within each group). */
   private orderFourLeadsFirst(
     four: readonly [number, number, number, number],
     lead: readonly [number, number],
@@ -65,43 +67,47 @@ export class LeadPick {
     return `${wins} V / ${losses} D / ${draws} N (${ref.sampleSize} combats)`;
   }
 
+  leadLabelForStudy(study: OpeningStudyDisplay): string {
+    return formatOpponentLeadLabel(this.opponentTeam(), study.opponentLeadSlots);
+  }
+
+  leadMatchupAriaLabel(study: OpeningStudyDisplay): string {
+    const ours = this.ourTeam();
+    const opp = this.opponentTeam();
+    const rec = this.recommendation();
+    if (!rec) {
+      return this.leadLabelForStudy(study);
+    }
+    const ourNames = rec.ourLeadSlots
+      .map((s) => ours.pokemon[s]?.species ?? `slot ${s}`)
+      .join(', ');
+    const oppNames = study.opponentLeadSlots
+      .map((s) => opp.pokemon[s]?.species ?? `slot ${s}`)
+      .join(', ');
+    return `Notre lead ${ourNames} contre ${oppNames}`;
+  }
+
   leadLabel(leadId: string): string {
     const leads = this.opponentLeads();
     if (!leads) {
       return leadId;
     }
-    return opponentLeadLabelById(
-      this.opponentTeam(),
-      leads,
-      leadId,
-    );
+    return opponentLeadLabelById(this.opponentTeam(), leads, leadId);
   }
 
-  isStudied(leadId: string): boolean {
-    const rec = this.recommendation();
-    if (!rec) {
-      return false;
-    }
-    return rec.studiedLeads.some(
-      (s) => s.opponentLeadId === leadId,
-    );
+  previewPercent(count: number, sampleSize: number): string {
+    return formatPercent(count, sampleSize);
   }
 
-  formatAction(action: BattleAction): string {
-    const ours = this.ourTeam();
-    if (action.kind === 'switch') {
-      return `${ours.pokemon[action.actor.slot].species} → ${ours.pokemon[action.switchTo.slot].species}`;
-    }
-    const actor = ours.pokemon[action.actor.slot].species;
-    const opp = this.opponentTeam();
-    const targets = action.targets
-      .map((t) =>
-        t.kind === 'zone' ? t.zone : opp.pokemon[t.ref.slot].species,
-      )
-      .join(', ');
-    const tera = action.terastallize ? ` (Tera ${action.terastallize})` : '';
-    return `${actor} : ${action.move} → ${targets}${tera}`;
+  formatOurPair(study: OpeningStudyDisplay, row: OpeningStudyDisplay['ourActions'][number]): string {
+    return formatActionPair(row.value, this.ourTeam(), this.opponentTeam());
   }
+
+  formatOppPair(study: OpeningStudyDisplay, row: OpeningStudyDisplay['opponentActions'][number]): string {
+    return formatActionPair(row.value, this.ourTeam(), this.opponentTeam());
+  }
+
+  freqLabel = formatFrequencyLabel;
 
   formatRefinementTurnRow(row: unknown): string | null {
     if (typeof row !== 'object' || row === null) {
@@ -114,8 +120,7 @@ export class LeadPick {
     if (!Array.isArray(value) || value.length !== 2) {
       return null;
     }
-    const a = value[0] as BattleAction;
-    const b = value[1] as BattleAction;
-    return `${this.formatAction(a)} ; ${this.formatAction(b)} (n=${count}/${sample})`;
+    const pair = value as [import('../../core/models/matchup.model').BattleAction, import('../../core/models/matchup.model').BattleAction];
+    return `${formatBattleAction(pair[0], this.ourTeam(), this.opponentTeam())} ; ${formatBattleAction(pair[1], this.ourTeam(), this.opponentTeam())} (n=${count}/${sample})`;
   }
 }

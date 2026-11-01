@@ -3,22 +3,17 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { validateSimulationResult } from './simulation-result-validator';
 
-const EXAMPLES_DIR = join(process.cwd(), '../../pokecoach2-python/contracts/examples');
+const EXAMPLES_DIR = join(
+  process.cwd(),
+  '../../pokecoach2-python/contracts/examples/openings',
+);
 
-const EXAMPLE_FILES = [
-  'simulation-empty.json',
-  'simulation-a.json',
-  'simulation-ab.json',
-  'simulation-abc.json',
-  'simulation-abcd.json',
-  'simulation-complete.json',
-] as const;
+const EXAMPLE_FILES = ['empty.json', 'a.json', 'ac.json', 'acb.json', 'acbd.json'] as const;
 
 describe('simulation-result-validator', () => {
   it.each(EXAMPLE_FILES)('validates contract example %s', (name) => {
     const payload = JSON.parse(readFileSync(join(EXAMPLES_DIR, name), 'utf-8'));
-    const requireComplete = name === 'simulation-complete.json';
-    const outcome = validateSimulationResult(payload, { requireComplete });
+    const outcome = validateSimulationResult(payload);
     expect(outcome.ok).toBe(true);
   });
 
@@ -28,10 +23,21 @@ describe('simulation-result-validator', () => {
   });
 
   it('rejects extra root field', () => {
-    const payload = JSON.parse(
-      readFileSync(join(EXAMPLES_DIR, 'simulation-empty.json'), 'utf-8'),
-    );
+    const payload = JSON.parse(readFileSync(join(EXAMPLES_DIR, 'empty.json'), 'utf-8'));
     const outcome = validateSimulationResult({ ...payload, unexpected: true });
+    expect(outcome.ok).toBe(false);
+  });
+
+  it('rejects legacy turn1 on leads', () => {
+    const payload = JSON.parse(readFileSync(join(EXAMPLES_DIR, 'a.json'), 'utf-8'));
+    const lead = payload.opponentLeads.leads[0];
+    const outcome = validateSimulationResult({
+      ...payload,
+      opponentLeads: {
+        ...payload.opponentLeads,
+        leads: [{ ...lead, turn1: null }],
+      },
+    });
     expect(outcome.ok).toBe(false);
   });
 
@@ -42,6 +48,7 @@ describe('simulation-result-validator', () => {
       completedPhases: [],
       opponentLeads: null,
       leadPick: null,
+      openings: null,
       refinement: null,
       gameplan: null,
       winCondition: null,

@@ -1,20 +1,19 @@
-/** Enveloppe simulation v2 — alignée sur §14 et `analysis_result.py`. */
+/** Enveloppe simulation v2 — ordre A,C,B,D (plan ouvertures conditionnées). */
 
-export type SimulationPhase = 'A' | 'B' | 'C' | 'D' | 'synthesis';
+export type SimulationPhase = 'A' | 'C' | 'B' | 'D' | 'synthesis';
 
-export interface Turn1SectionV2 {
-  sampleSize: number;
-  jointActions: unknown[];
-  backPairs: unknown[];
-  backSlotMarginals: unknown[];
-  endStateNotes: string[];
-}
+export const SIMULATION_PHASE_ORDER: readonly SimulationPhase[] = [
+  'A',
+  'C',
+  'B',
+  'D',
+  'synthesis',
+];
 
 export interface OpponentLeadEntryV2 {
   id: string;
   slots: readonly [number, number];
   count: number;
-  turn1: Turn1SectionV2 | null;
 }
 
 export interface OpponentLeadsSectionV2 {
@@ -30,9 +29,27 @@ export interface LeadSelectionV2 {
 export interface LeadPickSectionV2 {
   selection: LeadSelectionV2;
   comparisons: unknown[];
-  firstTurns: unknown[];
   selectionRuleVersion: string;
   limitations: string[];
+}
+
+export interface OpeningsSectionV2 {
+  selection: LeadSelectionV2;
+  recommendationRule: 'model-frequency-v1';
+  samplingPolicy: string;
+  byOpponentLead: OpeningStudyEntryV2[];
+}
+
+export interface OpeningStudyEntryV2 {
+  opponentLeadId: string;
+  opponentLeadSlots: readonly [number, number];
+  sampleSize: number;
+  opponentActions: unknown[];
+  ourActions: unknown[];
+  recommendation: Record<string, unknown>;
+  backPairs: unknown[];
+  backSlotMarginals: unknown[];
+  endStateNotes: string[];
 }
 
 export interface RefinementSectionV2 {
@@ -67,6 +84,7 @@ export interface SimulationResultV2 {
   completedPhases: SimulationPhase[];
   opponentLeads: OpponentLeadsSectionV2 | null;
   leadPick: LeadPickSectionV2 | null;
+  openings: OpeningsSectionV2 | null;
   refinement: RefinementSectionV2 | null;
   gameplan: GameplanSectionV2 | null;
   winCondition: WinConditionSectionV2 | null;

@@ -29,8 +29,8 @@ ${DEMO_OUR_TEAM_PASTE.split('\n\n').slice(1).join('\n\n')}`;
     const result = parser.parse(DEMO_OUR_TEAM_PASTE);
     expect(result.kind).toBe('success');
     if (result.kind === 'success') {
-      expect(result.pokemon[0].species).toBe('Farigiraf');
-      expect(result.pokemon[0].nature).toBe('Calm');
+      expect(result.pokemon[0].species).toBe('Excadrill');
+      expect(result.pokemon[0].nature).toBe('Adamant');
     }
   });
 
