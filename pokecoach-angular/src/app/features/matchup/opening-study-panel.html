@@ -40,6 +40,15 @@
             {{ formatOurPair(reco) }}
             <span class="tw:text-base-content/70">({{ freqLabel(reco) }})</span>
           </p>
+          @if (reco.resolutions?.length) {
+            <ul class="tw:list-disc tw:pl-4 tw:text-xs tw:mt-1 tw:text-base-content/80">
+              @for (res of reco.resolutions; track $index) {
+                <li>
+                  {{ formatResolutionRow(reco, res) }}
+                </li>
+              }
+            </ul>
+          }
           <p class="tw:text-xs tw:text-base-content/70 tw:m-0">
             {{ 'leadPick.recoHint' | transloco }}
           </p>

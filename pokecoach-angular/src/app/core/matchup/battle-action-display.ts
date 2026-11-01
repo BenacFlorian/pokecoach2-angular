@@ -218,10 +218,20 @@ export function parseActionPair(raw: unknown): readonly [BattleAction, BattleAct
   return [raw[0], raw[1]];
 }
 
+export type ActionResolutionDisplay = {
+  actor: PokemonRef;
+  executed: boolean;
+  reason: string | null;
+  cause: string;
+  selectedTarget: unknown;
+  resolvedTargets: unknown[];
+};
+
 export type ActionPairFrequencyDisplay = {
   value: readonly [BattleAction, BattleAction];
   count: number;
   sampleSize: number;
+  resolutions?: readonly { value: readonly ActionResolutionDisplay[]; count: number }[];
 };
 
 export function parseActionPairFrequency(
@@ -238,7 +248,64 @@ export function parseActionPairFrequency(
   if (!pair) {
     return null;
   }
-  return { value: pair, count: obj['count'], sampleSize: obj['sampleSize'] };
+  const resolutions = parseResolutionRows(obj['resolutions']);
+  return { value: pair, count: obj['count'], sampleSize: obj['sampleSize'], resolutions };
+}
+
+function parseResolutionRows(
+  raw: unknown,
+): readonly { value: readonly ActionResolutionDisplay[]; count: number }[] | undefined {
+  if (!Array.isArray(raw)) {
+    return undefined;
+  }
+  const rows: { value: readonly ActionResolutionDisplay[]; count: number }[] = [];
+  for (const item of raw) {
+    if (typeof item !== 'object' || item === null) {
+      continue;
+    }
+    const row = item as Record<string, unknown>;
+    if (typeof row['count'] !== 'number' || !Array.isArray(row['value'])) {
+      continue;
+    }
+    const parsed: ActionResolutionDisplay[] = [];
+    for (const entry of row['value']) {
+      if (typeof entry !== 'object' || entry === null) {
+        continue;
+      }
+      const obj = entry as Record<string, unknown>;
+      if (!isPokemonRef(obj['actor'])) {
+        continue;
+      }
+      parsed.push({
+        actor: obj['actor'],
+        executed: Boolean(obj['executed']),
+        reason: typeof obj['reason'] === 'string' ? obj['reason'] : null,
+        cause: typeof obj['cause'] === 'string' ? obj['cause'] : 'other',
+        selectedTarget: obj['selectedTarget'] ?? null,
+        resolvedTargets: Array.isArray(obj['resolvedTargets']) ? obj['resolvedTargets'] : [],
+      });
+    }
+    if (parsed.length === 2) {
+      rows.push({ value: parsed, count: row['count'] });
+    }
+  }
+  return rows.length ? rows : undefined;
+}
+
+export function formatResolutionCause(
+  cause: string,
+  labels: { switch: () => string; redirect: () => string; notExecuted: () => string },
+): string {
+  switch (cause) {
+    case 'switch':
+      return labels.switch();
+    case 'redirect':
+      return labels.redirect();
+    case 'not-executed':
+      return labels.notExecuted();
+    default:
+      return '';
+  }
 }
 
 export function formatFrequencyLabel(f: ActionPairFrequencyDisplay): string {

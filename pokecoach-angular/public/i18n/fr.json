@@ -83,6 +83,11 @@
     "oppAlternatives": "Autres choix observés",
     "ourTurn1": "Notre tour 1 recommandé",
     "recoHint": "Choix le plus fréquent du modèle pour cette confrontation.",
+    "resolution": {
+      "switch": "changement de Pokémon observé",
+      "redirect": "cible redirigée",
+      "notExecuted": "capacité non exécutée"
+    },
     "ourAlternatives": "Autres choix de notre modèle",
     "endNotes": "Observations de fin de tour",
     "comparisons": "Compositions comparées",

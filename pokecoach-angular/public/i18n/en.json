@@ -83,6 +83,11 @@
     "oppAlternatives": "Other observed choices",
     "ourTurn1": "Our recommended turn 1",
     "recoHint": "Most frequent model choice for this matchup.",
+    "resolution": {
+      "switch": "observed Pokémon switch",
+      "redirect": "redirected target",
+      "notExecuted": "move not executed"
+    },
     "ourAlternatives": "Other model choices",
     "endNotes": "End-of-turn notes",
     "comparisons": "Compared compositions",

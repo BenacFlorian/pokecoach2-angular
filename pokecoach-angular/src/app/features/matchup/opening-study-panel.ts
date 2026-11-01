@@ -6,7 +6,9 @@ import {
   createMoveTargetLabels,
   formatActionPair,
   formatFrequencyLabel,
+  formatResolutionCause,
 } from '../../core/matchup/battle-action-display';
+import type { ActionPairFrequencyDisplay } from '../../core/matchup/battle-action-display';
 import type { OpeningStudyDisplay } from '../../core/matchup/simulation-display';
 import { formatFrequencyPercent } from '../../core/matchup/matchup-display';
 import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
@@ -60,5 +62,29 @@ export class OpeningStudyPanel {
       this.opponentTeam(),
       this.moveLabels(),
     );
+  }
+
+  formatResolutionRow(
+    row: ActionPairFrequencyDisplay,
+    resolution: NonNullable<ActionPairFrequencyDisplay['resolutions']>[number],
+  ): string {
+    const base = formatActionPair(row.value, this.ourTeam(), this.opponentTeam(), this.moveLabels());
+    const causes = resolution.value
+      .map((entry) =>
+        formatResolutionCause(entry.cause, {
+          switch: () => this.transloco.translate('leadPick.resolution.switch'),
+          redirect: () => this.transloco.translate('leadPick.resolution.redirect'),
+          notExecuted: () => this.transloco.translate('leadPick.resolution.notExecuted'),
+        }),
+      )
+      .filter((text) => text.length > 0)
+      .join(' · ');
+    const pct =
+      row.sampleSize > 0
+        ? Math.round((resolution.count / row.sampleSize) * 1000) / 10
+        : 0;
+    return causes
+      ? `${base} — ${causes} (${resolution.count}/${row.sampleSize}, ${pct} %)`
+      : `${base} (${resolution.count}/${row.sampleSize}, ${pct} %)`;
   }
 }
