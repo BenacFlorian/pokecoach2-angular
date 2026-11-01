@@ -16,6 +16,7 @@
     "e2e:conditioned-openings": "playwright test e2e/conditioned-openings.spec.ts",
     "e2e:global-refinement": "playwright test e2e/global-refinement.spec.ts",
     "e2e:global-refinement-live": "playwright test e2e/global-refinement-live.spec.ts",
+    "e2e:matchup-page": "playwright test e2e/matchup-single-page.spec.ts",
     "e2e:live": "playwright test e2e/coach-live.spec.ts",
     "generate:demo-seed": "tsx scripts/generate-demo-seed.mts",
     "generate:demo-seed:check": "tsx scripts/generate-demo-seed.mts --check",

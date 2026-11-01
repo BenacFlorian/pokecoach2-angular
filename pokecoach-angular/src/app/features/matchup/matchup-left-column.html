@@ -1,0 +1,74 @@
+<div class="tw:flex tw:flex-col tw:gap-4 tw:min-h-0 tw:overflow-y-auto">
+  @if (recommendation(); as rec) {
+    @let ours = ourTeam();
+    <div
+      class="tw:flex tw:flex-wrap tw:items-center tw:gap-4 tw:p-3 tw:rounded-box"
+    >
+      <div class="tw:flex tw:flex-wrap tw:gap-3 tw:items-center">
+        @for (slot of displayFourSlots(rec); track slot) {
+          <div
+            class="tw:p-2 tw:rounded-box"
+            [class.tw:ring-2]="rec.ourLeadSlots.includes(slot)"
+            [class.tw:ring-primary]="rec.ourLeadSlots.includes(slot)"
+          >
+            <app-pokemon-portrait [pokemon]="ours.pokemon[slot]" [showSetDetails]="false" />
+            @if (rec.ourLeadSlots.includes(slot)) {
+              <span class="tw:text-xs tw:block tw:text-center tw:mt-1">{{
+                'leadPick.leadTag' | transloco
+              }}</span>
+            } @else {
+              <span class="tw:text-xs tw:block tw:text-center tw:mt-1">{{
+                'leadPick.backTag' | transloco
+              }}</span>
+            }
+          </div>
+        }
+      </div>
+
+      @if (refinement(); as ref) {
+        <div class="tw:flex tw:flex-col tw:gap-1 tw:min-w-[10rem]">
+          <p class="tw:text-sm tw:font-medium tw:m-0">{{ refinementSummaryLabel(ref) }}</p>
+          <p class="tw:text-sm tw:m-0">
+            {{ 'leadPick.refinementWinRate' | transloco: { rate: refinementWinRate(ref) } }}
+          </p>
+        </div>
+      }
+
+      <div class="tw:flex tw:flex-wrap tw:gap-2">
+        @if (selectionDetails()) {
+          <button
+            type="button"
+            class="tw:btn tw:btn-neutral tw:btn-soft tw:btn-sm"
+            (click)="openSelectionDetails($event)"
+          >
+            {{ 'matchup.modalSelectionButton' | transloco }}
+          </button>
+        }
+        @if (refinement()) {
+          <button
+            type="button"
+            class="tw:btn tw:btn-neutral tw:btn-soft tw:btn-sm"
+            (click)="openScenarios($event)"
+          >
+            {{ 'matchup.modalScenariosButton' | transloco }}
+          </button>
+        }
+      </div>
+    </div>
+  } @else {
+    <p class="tw:text-base-content/70 tw:m-0">{{ 'common.notCalculated' | transloco }}</p>
+  }
+
+  <app-gameplan-tab [ourTeam]="ourTeam()" [opponentTeam]="opponentTeam()" [gameplan]="gameplan()" />
+
+  <app-refinement-scenarios-modal
+    [ourTeam]="ourTeam()"
+    [opponentTeam]="opponentTeam()"
+    [refinement]="refinement()"
+  />
+  <app-selection-detail-modal
+    [opponentTeam]="opponentTeam()"
+    [opponentLeads]="opponentLeads()"
+    [details]="selectionDetails()"
+  />
+</div>

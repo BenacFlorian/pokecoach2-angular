@@ -73,6 +73,20 @@ function teamNode(id: string, name: string, kind: 'owned' | 'opponent') {
   };
 }
 
+function teamSnapshotForRun(team: ReturnType<typeof teamNode>) {
+  return {
+    id: team.id,
+    name: team.name,
+    source: {
+      kind: team.sourceKind,
+      rawText: team.sourceText,
+      ...(team.sourceUrl ? { url: team.sourceUrl } : {}),
+    },
+    pokemon: team.pokemon,
+    createdAt: team.createdAt,
+  };
+}
+
 export interface MockGraphqlState {
   teams: ReturnType<typeof teamNode>[];
   matchups: {
@@ -88,12 +102,18 @@ export interface MockGraphqlState {
       source: string;
       createdAt: string;
       finishedAt: string | null;
+      targetPhase?: string | null;
     }[];
   }[];
+  /** partialResult v2 keyed by run id (GetRun). */
+  simulationRuns: Record<
+    string,
+    { matchupId: string; partialResult: Record<string, unknown> }
+  >;
 }
 
 export function createMockGraphqlState(): MockGraphqlState {
-  return { teams: [], matchups: [] };
+  return { teams: [], matchups: [], simulationRuns: {} };
 }
 
 export async function installGraphqlMock(
@@ -252,6 +272,54 @@ export async function installGraphqlMock(
               opponentTeam: row.opponentTeam,
               matchupRuns: { nodes: row.runs },
               latestSuccessfulRun: null,
+            },
+          },
+        }),
+      });
+      return;
+    }
+
+    if (op === 'GetRun') {
+      const runId = body.variables?.['runId'] as string;
+      const sim = state.simulationRuns[runId];
+      if (!sim) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ data: { matchupRun: null } }),
+        });
+        return;
+      }
+      const row = state.matchups.find((m) => m.id === sim.matchupId);
+      const ourTeam = row
+        ? state.teams.find((t) => t.id === row.ourTeamId && t.kind === 'owned')
+        : undefined;
+      const summary = row?.runs.find((r) => r.id === runId);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: {
+            matchupRun: {
+              id: runId,
+              matchupId: sim.matchupId,
+              status: summary?.status ?? 'succeeded',
+              processStatus: summary?.processStatus ?? 'SUCCESS',
+              source: 'simulation',
+              createdAt: summary?.createdAt ?? new Date().toISOString(),
+              finishedAt: new Date().toISOString(),
+              targetPhase: summary?.targetPhase ?? 'B',
+              reportVersion: 2,
+              report: null,
+              partialResult: sim.partialResult,
+              ourTeamSnapshot: ourTeam ? teamSnapshotForRun(ourTeam) : null,
+              opponentTeamSnapshot: row?.opponentTeam
+                ? teamSnapshotForRun(row.opponentTeam)
+                : null,
+              resultRevision: 1,
+              progress: null,
+              executionMetadata: {},
+              provenance: {},
             },
           },
         }),

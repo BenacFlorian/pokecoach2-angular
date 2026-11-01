@@ -10,6 +10,7 @@
     "vs": "VS",
     "retry": "Retry",
     "cancel": "Cancel",
+    "close": "Close",
     "notCalculated": "Not calculated yet",
     "noObservation": "No observations"
   },
@@ -21,7 +22,26 @@
     "tabsAria": "Matchup analysis",
     "tabOpponentPicks": "Opponent picks",
     "tabLeadT1": "Lead & T1",
-    "tabGameplan": "Gameplan"
+    "tabGameplan": "Gameplan",
+    "openingsNotReady": "Openings not available for this lead.",
+    "modalScenariosButton": "Simulated scenarios",
+    "modalScenariosTitle": "Simulated scenarios (phase D)",
+    "modalSelectionButton": "Selection details",
+    "modalSelectionTitle": "Selection details (phase C)",
+    "selectionRule": "Selection rule: {{version}}",
+    "noComparisons": "No comparisons available.",
+    "leadsColumnTitle": "Opponent leads"
+  },
+  "gameplan": {
+    "opening": "Opening",
+    "midgame": "Mid game",
+    "endgame": "End game",
+    "win": "Win condition",
+    "threats": "Threats",
+    "preserve": "Preserve",
+    "eliminate": "Eliminate",
+    "adaptations": "Adaptations",
+    "supplementary": "Additional information"
   },
   "analysis": {
     "analyze": "Analyze this matchup",

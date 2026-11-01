@@ -1,6 +1,7 @@
 import {
   Component,
   DestroyRef,
+  computed,
   effect,
   inject,
   input,
@@ -22,27 +23,28 @@ import type {
   GameplanReport,
   LeadRecommendation,
   OpponentLeadStats,
-  SelectionResult,
 } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
+import type { RefinementSectionV2 } from '../../core/models/simulation-result.model';
+import {
+  buildSelectionDetails,
+  leadPickSectionFromSimulation,
+} from '../../core/matchup/selection-details-display';
+import type { OpeningStudyDisplay } from '../../core/matchup/simulation-display';
 import { type AnalysisCapabilitiesView } from '../../core/python/analysis-api.models';
 import { AnalysisApi } from '../../core/python/analysis-api';
 import { AnalysisControls } from './analysis-controls';
-import { GameplanTab } from './gameplan';
-import { LeadPick } from './lead-pick';
-import { OpponentLeads } from './opponent-leads';
+import { MatchupLeftColumn } from './matchup-left-column';
+import { MatchupRightColumn } from './matchup-right-column';
 import { TeamStrip } from '../../shared/teams/team-strip';
-
-type MatchupTab = 'opponent-leads' | 'lead-pick' | 'gameplan';
 
 @Component({
   selector: 'app-matchup',
   imports: [
     RouterLink,
     TeamStrip,
-    OpponentLeads,
-    LeadPick,
-    GameplanTab,
+    MatchupLeftColumn,
+    MatchupRightColumn,
     AnalysisControls,
     TranslocoPipe,
   ],
@@ -60,11 +62,6 @@ export class Matchup {
 
   readonly capabilities = signal<AnalysisCapabilitiesView | null>(null);
 
-  readonly activeTab = signal<MatchupTab>('opponent-leads');
-  readonly selectedLeadId = signal<string>('');
-
-  readonly tabOrder: MatchupTab[] = ['opponent-leads', 'lead-pick', 'gameplan'];
-
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private lastLoadedKey = '';
   private lastRunKey = '';
@@ -77,8 +74,6 @@ export class Matchup {
       if (key !== this.lastLoadedKey) {
         this.lastLoadedKey = key;
         this.lastRunKey = '';
-        this.activeTab.set('opponent-leads');
-        this.selectedLeadId.set('');
       }
       this.store.loadMatchup(teamId, matchupId);
     });
@@ -108,18 +103,6 @@ export class Matchup {
       this.syncPolling();
     });
 
-    effect(() => {
-      const leads = this.opponentLeadsForTabs();
-      if (!leads?.length) {
-        return;
-      }
-      const sorted = [...leads].sort((a, b) => b.phaseACount - a.phaseACount);
-      const current = this.selectedLeadId();
-      if (!current || !sorted.some((l) => l.id === current)) {
-        this.selectedLeadId.set(sorted[0]?.id ?? '');
-      }
-    });
-
     this.destroyRef.onDestroy(() => this.stopPolling());
 
     if (typeof document !== 'undefined') {
@@ -135,6 +118,13 @@ export class Matchup {
     });
   }
 
+  readonly contextKey = computed(() => {
+    const teamId = this.teamId();
+    const matchupId = this.matchupId();
+    const run = this.selectedRunSummary();
+    return `${teamId}:${matchupId}:${run?.id ?? 'none'}`;
+  });
+
   private readonly onVisibilityChange = (): void => {
     if (document.hidden) {
       this.stopPolling();
@@ -149,10 +139,6 @@ export class Matchup {
     }
     this.syncPolling();
   };
-
-  detail() {
-    return this.store.matchupDetail();
-  }
 
   selectedRunView(): SelectedRunView | null {
     const state = this.store.selectedRunState();
@@ -198,12 +184,17 @@ export class Matchup {
     return null;
   }
 
-  showTabs(): boolean {
+  runContentAvailable(): boolean {
     const view = this.selectedRunView();
     if (view?.kind === 'mock' || view?.kind === 'simulation') {
       return true;
     }
     return this.runResult() !== null;
+  }
+
+  showLeadColumns(): boolean {
+    const leads = this.opponentLeadsForView();
+    return Boolean(leads?.length);
   }
 
   bannerOurTeam(): Team | null {
@@ -232,7 +223,7 @@ export class Matchup {
     return result?.opponentTeamSnapshot ?? detail?.opponentTeam ?? null;
   }
 
-  opponentLeadsForTabs(): readonly OpponentLeadStats[] | null | undefined {
+  opponentLeadsForView(): readonly OpponentLeadStats[] | null | undefined {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
       return view.view.tabDisplay.opponentLeads;
@@ -249,7 +240,7 @@ export class Matchup {
     return false;
   }
 
-  openingsForTab(): readonly import('../../core/matchup/simulation-display').OpeningStudyDisplay[] | null {
+  openingsForView(): readonly OpeningStudyDisplay[] | null {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
       return view.view.tabDisplay.openings;
@@ -257,7 +248,7 @@ export class Matchup {
     return null;
   }
 
-  openingsPendingForTab(): boolean {
+  openingsPendingForView(): boolean {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
       return view.view.tabDisplay.openingsPending;
@@ -265,7 +256,7 @@ export class Matchup {
     return false;
   }
 
-  leadRecommendationForTab(): LeadRecommendation | null {
+  leadRecommendationForView(): LeadRecommendation | null {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
       return view.view.tabDisplay.leadRecommendation;
@@ -273,15 +264,29 @@ export class Matchup {
     return this.runResult()?.report.leadRecommendation ?? null;
   }
 
-  selectionsForTab(): readonly SelectionResult[] | null {
+  selectionDetailsForView() {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
-      return view.view.tabDisplay.selectionComparisons;
+      const partial = view.view.partialResult;
+      const section = leadPickSectionFromSimulation(partial);
+      return buildSelectionDetails(
+        section,
+        view.view.tabDisplay.leadRecommendation,
+        view.view.tabDisplay.selectionComparisons,
+      );
     }
-    return this.runResult()?.report.selectionComparisons ?? null;
+    const result = this.runResult();
+    if (!result) {
+      return null;
+    }
+    return buildSelectionDetails(
+      null,
+      result.report.leadRecommendation,
+      result.report.selectionComparisons,
+    );
   }
 
-  refinementForTab(): import('../../core/models/simulation-result.model').RefinementSectionV2 | null {
+  refinementForView(): RefinementSectionV2 | null {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
       return view.view.tabDisplay.refinement;
@@ -289,7 +294,7 @@ export class Matchup {
     return null;
   }
 
-  gameplanForTab(): GameplanReport | null {
+  gameplanForView(): GameplanReport | null {
     const view = this.selectedRunView();
     if (view?.kind === 'simulation') {
       return view.view.tabDisplay.gameplan;
@@ -384,31 +389,6 @@ export class Matchup {
       this.store.refreshRun(teamId, matchupId, run.id);
     }
     this.syncPolling();
-  }
-
-  setTab(tab: MatchupTab, event?: Event): void {
-    this.activeTab.set(tab);
-    if (event && event.target instanceof HTMLElement) {
-      event.target.focus();
-    }
-  }
-
-  onTabKeydown(event: KeyboardEvent, tabs: MatchupTab[]): void {
-    const current = this.activeTab();
-    const index = tabs.indexOf(current);
-    if (event.key === 'ArrowRight') {
-      event.preventDefault();
-      this.activeTab.set(tabs[(index + 1) % tabs.length]);
-    } else if (event.key === 'ArrowLeft') {
-      event.preventDefault();
-      this.activeTab.set(tabs[(index - 1 + tabs.length) % tabs.length]);
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      this.activeTab.set(tabs[0]);
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      this.activeTab.set(tabs[tabs.length - 1]);
-    }
   }
 
   private syncPolling(): void {

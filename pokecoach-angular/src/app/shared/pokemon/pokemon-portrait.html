@@ -4,9 +4,17 @@
 @let summaryId = detailSummaryId(mon);
 
 <ng-template #portraitFigure>
-  <figure class="tw:flex tw:flex-col tw:items-center tw:gap-1 tw:min-w-[4.5rem]">
+  <figure
+    class="tw:flex tw:flex-col tw:items-center tw:gap-1"
+    [class.tw:min-w-[4.5rem]]="size() === 'md'"
+    [class.tw:min-w-[5.75rem]]="size() === 'lg'"
+  >
     <div
-      class="tw:relative tw:w-14 tw:h-14 tw:rounded-box tw:bg-base-200 tw:flex tw:items-center tw:justify-center tw:overflow-visible"
+      class="tw:relative tw:rounded-box tw:bg-base-200 tw:flex tw:items-center tw:justify-center tw:overflow-visible"
+      [class.tw:w-14]="size() === 'md'"
+      [class.tw:h-14]="size() === 'md'"
+      [class.tw:w-[4.25rem]]="size() === 'lg'"
+      [class.tw:h-[4.25rem]]="size() === 'lg'"
     >
       <div class="tw:w-full tw:h-full tw:overflow-hidden tw:rounded-box">
         @if (img && !imageFailed()) {
@@ -38,9 +46,15 @@
         />
       }
     </div>
-    <figcaption class="tw:text-xs tw:text-center tw:max-w-[5rem] tw:truncate">
-      {{ mon.species }}
-    </figcaption>
+    @if (showCaption()) {
+      <figcaption
+        class="tw:text-xs tw:text-center tw:truncate"
+        [class.tw:max-w-[5rem]]="size() === 'md'"
+        [class.tw:max-w-[6rem]]="size() === 'lg'"
+      >
+        {{ mon.species }}
+      </figcaption>
+    }
   </figure>
 </ng-template>
 

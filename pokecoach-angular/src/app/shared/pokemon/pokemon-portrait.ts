@@ -21,6 +21,9 @@ export class PokemonPortrait {
   readonly pokemon = input.required<PokemonSet>();
   readonly showSetDetails = input(false);
   readonly detailPopoverAlign = input<DetailPopoverAlign>('start');
+  /** `lg` : en-têtes de lead (colonne droite), etc. */
+  readonly size = input<'md' | 'lg'>('md');
+  readonly showCaption = input(true);
 
   readonly imageFailed = signal(false);
 

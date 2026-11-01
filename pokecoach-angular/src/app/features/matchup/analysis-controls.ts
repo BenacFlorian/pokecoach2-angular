@@ -2,7 +2,7 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { CoachStore } from '../../core/data/coach-store';
-import type { RunProgress, RunSummary } from '../../core/graphql/coach-mappers';
+import type { RunProgress, RunSummary, RunStatusI18n } from '../../core/graphql/coach-mappers';
 import {
   type AnalysisCapabilitiesView,
   type AnalysisProfile,
@@ -22,6 +22,7 @@ export class AnalysisControls {
   readonly capabilities = input<AnalysisCapabilitiesView | null>(null);
   readonly progressBar = input<RunProgress | null>(null);
   readonly progressHint = input<string | null>(null);
+  readonly runStatus = input<RunStatusI18n | null>(null);
 
   readonly runStarted = output<string>();
   readonly commandError = output<string>();

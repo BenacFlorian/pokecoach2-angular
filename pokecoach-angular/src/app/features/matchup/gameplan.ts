@@ -1,10 +1,11 @@
 import { Component, input } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import type { GameplanReport } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
 
 @Component({
   selector: 'app-gameplan-tab',
-  imports: [],
+  imports: [TranslocoPipe],
   templateUrl: './gameplan.html',
 })
 export class GameplanTab {

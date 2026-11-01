@@ -65,3 +65,4 @@ Pas de moteur Python / LLM dans le navigateur. Les tests e2e mockent GraphQL (su
 - [Plan 3 — PostGraphile](./docs/plans/2026-10-31-03-angular-postgraphile.md)
 - [Plan 4 — lancer Python à l’ajout d’un matchup](./docs/plans/2026-10-31-04-angular-ajout-matchup-python.md)
 - [Plan 5 — ouvertures conditionnées dans Lead & pick](./docs/plans/2026-11-01-05-ouvertures-conditionnees-lead-pick.md) — après le plan backend associé : A → C → B → D, suppression des actions T1 d’Opponent Leads et présentation des deux côtés face à notre sélection fixe. E reste hors périmètre, dans son plan dédié.
+- [Spec 6 — page matchup sans onglets](./docs/plans/2026-11-01-06-matchup-page-refonte.md) et [plan d’implémentation 06b](./docs/plans/2026-11-01-06b-matchup-page-refonte-implementation.md) — trois bandes, deux colonnes, accordéon des leads et modales C/D ; contrat backend inchangé.

@@ -1,0 +1,53 @@
+@if (leads() === null) {
+  <p class="tw:text-base-content/70 tw:m-0">{{ 'common.notCalculated' | transloco }}</p>
+} @else if (!sortedLeads().length) {
+  <p class="tw:text-base-content/70 tw:m-0">{{ 'common.noObservation' | transloco }}</p>
+} @else {
+  <ul class="tw:flex tw:flex-col tw:gap-2 tw:m-0 tw:p-0 tw:list-none" role="list">
+    @for (lead of sortedLeads(); track lead.id) {
+      <li class="tw:border-2 tw:border-base-content/20 tw:rounded-box tw:overflow-hidden">
+        <button
+          type="button"
+          class="tw:w-full tw:text-left tw:p-4 tw:flex tw:flex-row tw:items-center tw:gap-4 hover:tw:bg-base-200/40"
+          [attr.aria-expanded]="expandedLeadId() === lead.id"
+          [attr.aria-controls]="panelId(lead.id)"
+          (click)="toggleLead(lead.id)"
+          (keydown)="onLeadKeydown($event, lead.id)"
+        >
+          <div class="tw:flex tw:gap-2 tw:items-center tw:shrink-0">
+            <app-pokemon-portrait
+              [pokemon]="mon(opponentTeam(), lead.leadSlots[0])"
+              [showSetDetails]="false"
+              [showCaption]="false"
+              size="lg"
+            />
+            <app-pokemon-portrait
+              [pokemon]="mon(opponentTeam(), lead.leadSlots[1])"
+              [showSetDetails]="false"
+              [showCaption]="false"
+              size="lg"
+            />
+          </div>
+          <p class="tw:m-0 tw:font-medium tw:text-sm tw:min-w-0 tw:flex-1">
+            {{ leadLabel(lead) }}
+            <span class="tw:font-normal tw:text-base-content/70">
+              — {{ previewPercent(lead) }} {{ 'leadPick.previewSuffix' | transloco }}
+            </span>
+          </p>
+        </button>
+        @if (expandedLeadId() === lead.id) {
+          <div [id]="panelId(lead.id)" class="tw:px-4 tw:pb-4">
+            <app-opening-study-panel
+              [ourTeam]="ourTeam()"
+              [opponentTeam]="opponentTeam()"
+              [lead]="lead"
+              [study]="studyFor(lead.id)"
+              [openingsPending]="openingsPending()"
+              [backsPending]="backsPending()"
+            />
+          </div>
+        }
+      </li>
+    }
+  </ul>
+}

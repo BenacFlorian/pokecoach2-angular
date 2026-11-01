@@ -1,0 +1,169 @@
+<div
+  class="tw:grid tw:grid-cols-1 tw:md:grid-cols-2 tw:gap-4 tw:pt-3 tw:border-t-2 tw:border-base-content/15"
+>
+  <div class="tw:flex tw:flex-col tw:gap-3 tw:min-w-0">
+    @if (openingsPending()) {
+      <p class="tw:text-base-content/70 tw:m-0">{{ 'leadPick.openingsPending' | transloco }}</p>
+    } @else if (study(); as card) {
+      <section>
+        <h4 class="tw:m-0 tw:text-sm tw:font-semibold">{{ 'leadPick.oppTurn1' | transloco }}</h4>
+        @if (card.opponentPrimary; as primary) {
+          <p class="tw:text-sm tw:mt-2 tw:m-0">
+            <span class="tw:font-medium">{{ 'leadPick.primary' | transloco }}</span>
+            {{ formatOppPair(primary) }}
+            <span class="tw:text-base-content/70">({{ freqLabel(primary) }})</span>
+          </p>
+        } @else {
+          <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">
+            {{ 'common.noObservation' | transloco }}
+          </p>
+        }
+        @if (card.opponentAlternatives.length) {
+          <details class="tw:mt-2">
+            <summary class="tw:text-sm">{{ 'leadPick.oppAlternatives' | transloco }}</summary>
+            <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+              @for (alt of card.opponentAlternatives; track $index) {
+                <li>
+                  {{ formatOppPair(alt) }}
+                  <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
+                </li>
+              }
+            </ul>
+          </details>
+        }
+      </section>
+
+      <section>
+        <h4 class="tw:m-0 tw:text-sm tw:font-semibold">{{ 'leadPick.ourTurn1' | transloco }}</h4>
+        @if (card.recommendation; as reco) {
+          <p class="tw:text-sm tw:mt-2 tw:m-0">
+            {{ formatOurPair(reco) }}
+            <span class="tw:text-base-content/70">({{ freqLabel(reco) }})</span>
+          </p>
+          <p class="tw:text-xs tw:text-base-content/70 tw:m-0">
+            {{ 'leadPick.recoHint' | transloco }}
+          </p>
+        } @else {
+          <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">
+            {{ 'common.noObservation' | transloco }}
+          </p>
+        }
+        @if (card.ourAlternatives.length) {
+          <details class="tw:mt-2">
+            <summary class="tw:text-sm">{{ 'leadPick.ourAlternatives' | transloco }}</summary>
+            <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+              @for (alt of card.ourAlternatives; track $index) {
+                <li>
+                  {{ formatOurPair(alt) }}
+                  <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
+                </li>
+              }
+            </ul>
+          </details>
+        }
+      </section>
+
+      @if (card.endStateNotes.length) {
+        <details class="tw:text-sm">
+          <summary>{{ 'leadPick.endNotes' | transloco }}</summary>
+          <ul class="tw:list-disc tw:pl-4 tw:mt-2">
+            @for (note of card.endStateNotes; track note) {
+              <li>{{ note }}</li>
+            }
+          </ul>
+        </details>
+      }
+    } @else {
+      <p class="tw:text-base-content/70 tw:m-0">{{ 'matchup.openingsNotReady' | transloco }}</p>
+    }
+  </div>
+
+  <div class="tw:flex tw:flex-col tw:gap-3 tw:min-w-0">
+    @if (backsPending()) {
+      <p class="tw:text-base-content/70 tw:m-0">{{ 'opponentLeads.backsPending' | transloco }}</p>
+    } @else {
+      <p class="tw:text-sm tw:text-base-content/70 tw:m-0">
+        {{ 'opponentLeads.backsContext' | transloco }}
+      </p>
+
+      <section class="tw:flex tw:flex-col tw:gap-2">
+        <h4 class="tw:m-0 tw:text-sm tw:font-semibold">
+          {{ 'opponentLeads.backPairs' | transloco }}
+        </h4>
+        @if (sortedBackPairs().length === 0) {
+          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">
+            {{ 'common.noObservation' | transloco }}
+          </p>
+        } @else {
+          <div
+            class="tw:flex tw:flex-row tw:flex-wrap tw:w-full tw:gap-2 tw:items-stretch"
+            role="list"
+          >
+            @for (bp of sortedBackPairs(); track $index) {
+              <div
+                class="tw:flex tw:flex-row tw:items-center tw:justify-center tw:gap-2 tw:min-w-0 tw:shrink-0 tw:rounded-box tw:border-2 tw:border-base-content/25 tw:bg-base-200 tw:px-2.5 tw:py-2"
+                role="listitem"
+              >
+                <app-pokemon-portrait
+                  [pokemon]="mon(opponentTeam(), bp.value[0])"
+                  [showSetDetails]="false"
+                />
+                <app-pokemon-portrait
+                  [pokemon]="mon(opponentTeam(), bp.value[1])"
+                  [showSetDetails]="false"
+                />
+                <span class="tw:font-semibold tw:text-sm tw:whitespace-nowrap tw:pl-1">{{
+                  freqPercent(bp)
+                }}</span>
+              </div>
+            }
+          </div>
+        }
+      </section>
+
+      @if (sortedBackMarginals().length) {
+        <section class="tw:flex tw:flex-col tw:gap-2">
+          <h4 class="tw:m-0 tw:text-sm tw:font-semibold">
+            {{ 'opponentLeads.backMarginals' | transloco }}
+          </h4>
+          <p class="tw:text-xs tw:text-base-content/70 tw:m-0">
+            {{ 'opponentLeads.marginalHint' | transloco }}
+          </p>
+          <div
+            class="tw:flex tw:flex-row tw:w-full tw:items-center tw:justify-between tw:gap-2 tw:border-2 tw:border-base-content/20 tw:rounded-box tw:p-3 tw:bg-base-100"
+            role="list"
+          >
+            @for (marg of sortedBackMarginals(); track marg.value) {
+              <div
+                class="tw:flex tw:flex-row tw:items-center tw:gap-1 tw:shrink-0"
+                role="listitem"
+              >
+                <app-pokemon-portrait
+                  [pokemon]="mon(opponentTeam(), marg.value)"
+                  [showSetDetails]="false"
+                  [showCaption]="false"
+                />
+                <span class="tw:font-medium tw:text-sm tw:whitespace-nowrap">{{
+                  freqPercent(marg)
+                }}</span>
+              </div>
+            }
+          </div>
+        </section>
+      }
+
+      @if (lead().turn1EndObservations.length) {
+        <section class="tw:flex tw:flex-col tw:gap-2">
+          <h4 class="tw:m-0 tw:text-sm tw:font-semibold">
+            {{ 'opponentLeads.turn1EndNotes' | transloco }}
+          </h4>
+          <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:m-0">
+            @for (note of lead().turn1EndObservations; track note) {
+              <li>{{ note }}</li>
+            }
+          </ul>
+        </section>
+      }
+    }
+  </div>
+</div>
