@@ -297,12 +297,18 @@ function buildGameplan(ours: Team, opponent: Team): GameplanReport {
         detail: 'À surveiller après Téracristallisation (fixture).',
       },
     ],
-    preserve: [ours.pokemon[0].species, ours.pokemon[3].species],
-    eliminate: [opponent.pokemon[1].species, opponent.pokemon[2].species],
-    adaptations: [
-      `Basculer ${ours.pokemon[4].species} si ${opponent.pokemon[3].species} impose Tailwind.`,
+    strengths: [
+      {
+        label: ours.pokemon[0].species,
+        detail: 'Pilier défensif du bring (fixture).',
+      },
+      {
+        label: ours.pokemon[3].species,
+        detail: 'Contrôle le tempo en midgame (fixture).',
+      },
     ],
     winCondition: `Empêcher ${opponent.pokemon[1].species} de sweep après la phase midgame ; conserver ${ours.pokemon[0].species} pour le clutch.`,
+    winConditionRationale: 'Condition observée sur l’échantillon fictif.',
     refinementSequences: [
       {
         label: 'Séquence D-1',

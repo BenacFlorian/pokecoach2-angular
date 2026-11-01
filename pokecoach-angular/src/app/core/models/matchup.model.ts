@@ -73,10 +73,9 @@ export interface GameplanReport {
   midgame: string;
   endgame: string;
   threats: readonly { label: string; detail: string }[];
-  preserve: readonly string[];
-  eliminate: readonly string[];
-  adaptations: readonly string[];
+  strengths: readonly { label: string; detail: string }[];
   winCondition: string;
+  winConditionRationale: string;
   refinementSequences: readonly { label: string; detail: string }[];
   sampleLimitation: string;
 }

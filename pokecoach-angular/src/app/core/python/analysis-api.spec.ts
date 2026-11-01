@@ -45,14 +45,18 @@ describe('AnalysisApi', () => {
 
   it('posts start with idempotency header and body', () => {
     api
-      .start(MATCHUP_ID, { targetPhase: 'A', profile: 'standard' }, KEY)
+      .start(MATCHUP_ID, { targetPhase: 'A', profile: 'standard', locale: 'fr' }, KEY)
       .subscribe();
     const req = httpMock.expectOne(
       `/api-python/matchups/${MATCHUP_ID}/analyses`,
     );
     expect(req.request.method).toBe('POST');
     expect(req.request.headers.get('Idempotency-Key')).toBe(KEY);
-    expect(req.request.body).toEqual({ targetPhase: 'A', profile: 'standard' });
+    expect(req.request.body).toEqual({
+      targetPhase: 'A',
+      profile: 'standard',
+      locale: 'fr',
+    });
     req.flush(
       {
         matchupId: MATCHUP_ID,
@@ -68,7 +72,7 @@ describe('AnalysisApi', () => {
   it('accepts idempotent 200 response', () => {
     let status = 0;
     api
-      .start(MATCHUP_ID, { targetPhase: 'A', profile: 'standard' }, KEY)
+      .start(MATCHUP_ID, { targetPhase: 'A', profile: 'standard', locale: 'fr' }, KEY)
       .subscribe((res) => {
         status = res.httpStatus;
       });
@@ -90,7 +94,7 @@ describe('AnalysisApi', () => {
 
   it('rejects invalid matchup uuid before http', () => {
     let err: unknown;
-    api.start('not-a-uuid', { targetPhase: 'A', profile: 'standard' }, KEY).subscribe({
+    api.start('not-a-uuid', { targetPhase: 'A', profile: 'standard', locale: 'fr' }, KEY).subscribe({
       error: (e) => {
         err = e;
       },
@@ -102,7 +106,7 @@ describe('AnalysisApi', () => {
   it('rejects response for another matchup', () => {
     let err: unknown;
     api
-      .start(MATCHUP_ID, { targetPhase: 'A', profile: 'standard' }, KEY)
+      .start(MATCHUP_ID, { targetPhase: 'A', profile: 'standard', locale: 'fr' }, KEY)
       .subscribe({
         error: (e) => {
           err = e;
@@ -127,7 +131,7 @@ describe('AnalysisApi', () => {
   it('maps http 422 to validation error', () => {
     let err: unknown;
     api
-      .start(MATCHUP_ID, { targetPhase: 'Z', profile: 'standard' }, KEY)
+      .start(MATCHUP_ID, { targetPhase: 'Z', profile: 'standard', locale: 'fr' }, KEY)
       .subscribe({
         error: (e) => {
           err = e;

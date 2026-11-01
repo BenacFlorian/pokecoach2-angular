@@ -38,15 +38,14 @@
     "endgame": "Fin de partie",
     "win": "Win condition",
     "threats": "Menaces",
-    "preserve": "À préserver",
-    "eliminate": "À éliminer",
-    "adaptations": "Adaptations",
-    "supplementary": "Informations complémentaires"
+    "strengths": "Nos points forts",
+    "generating": "Synthèse stratégique en cours…",
+    "synthesisUnavailable": "La synthèse LLM n’est pas configurée sur le serveur."
   },
   "analysis": {
     "analyze": "Analyser ce matchup",
     "launching": "Lancement…",
-    "helperIdle": "Analyse A→C→B→D enchaînées quand les phases sont disponibles ; pause après la cible ou la dernière phase implémentée.",
+    "helperIdle": "Analyse A→C→B→D puis synthèse gameplan quand le LLM est configuré ; pause après la cible ou la dernière phase implémentée.",
     "helperUnavailable": "Analyse indisponible (API Python ou worker).",
     "helperRunning": "Analyse en cours — les résultats partiels apparaîtront ici.",
     "helperPaused": "Étape terminée pour l’instant. Relancez une analyse pour continuer.",
@@ -110,7 +109,8 @@
     "A": "Observation des leads adverses",
     "C": "Sélection de notre bring",
     "B": "Ouvertures conditionnées",
-    "D": "Affinage"
+    "D": "Affinage",
+    "synthesis": "Synthèse stratégique"
   },
   "home": {
     "title": "Nos équipes",

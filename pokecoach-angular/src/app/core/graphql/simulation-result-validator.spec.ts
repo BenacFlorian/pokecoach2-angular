@@ -56,18 +56,12 @@ describe('simulation-result-validator', () => {
     expect(outcome.ok).toBe(false);
   });
 
-  it('rejects unknown format source', () => {
-    const outcome = validateSimulationResult({
-      schemaVersion: 2,
-      source: 'legacy',
-      completedPhases: [],
-      opponentLeads: null,
-      leadPick: null,
-      openings: null,
-      refinement: null,
-      gameplan: null,
-      winCondition: null,
-    });
-    expect(outcome.ok).toBe(false);
+  it('validates complete simulation example with synthesis gameplan', () => {
+    const examplesDir = join(process.cwd(), '../../pokecoach2-python/contracts/examples');
+    const payload = JSON.parse(
+      readFileSync(join(examplesDir, 'simulation-complete.json'), 'utf-8'),
+    );
+    const outcome = validateSimulationResult(payload);
+    expect(outcome.ok).toBe(true);
   });
 });

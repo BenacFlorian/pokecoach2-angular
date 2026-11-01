@@ -1,15 +1,19 @@
+import type { PokemonSlot, Team } from '../models/team.model';
+import type { RefinementSectionV2, SimulationResultV2 } from '../models/simulation-result.model';
 import type {
   GameplanReport,
   LeadRecommendation,
   OpponentLeadStats,
   SelectionResult,
 } from '../models/matchup.model';
-import type { PokemonSlot } from '../models/team.model';
+import {
+  mapPokemonHighlights,
+  type GameplanHighlightDisplay,
+} from './gameplan-display';
 import {
   parseActionPairFrequency,
   type ActionPairFrequencyDisplay,
 } from './battle-action-display';
-import type { RefinementSectionV2, SimulationResultV2 } from '../models/simulation-result.model';
 
 export interface OpeningStudyDisplay {
   opponentLeadId: string;
@@ -39,6 +43,7 @@ export interface SimulationTabDisplay {
 
 export function mapSimulationToTabDisplay(
   partial: SimulationResultV2,
+  teams?: { ours: Team; opponent: Team },
 ): SimulationTabDisplay {
   const hasC = partial.completedPhases.includes('C');
   const hasB = partial.completedPhases.includes('B');
@@ -66,8 +71,8 @@ export function mapSimulationToTabDisplay(
     : null;
 
   const gameplan =
-    hasSynthesis && partial.gameplan && partial.winCondition
-      ? mapGameplan(partial.gameplan, partial.winCondition, partial.leadPick?.limitations ?? [])
+    hasSynthesis && partial.gameplan && partial.winCondition && teams
+      ? mapGameplan(partial.gameplan, partial.winCondition, partial.leadPick?.limitations ?? [], teams)
       : null;
 
   return {
@@ -288,28 +293,27 @@ function mapGameplan(
   section: import('../models/simulation-result.model').GameplanSectionV2,
   win: import('../models/simulation-result.model').WinConditionSectionV2,
   limitations: string[],
+  teams: { ours: Team; opponent: Team },
 ): GameplanReport {
-  const threats = section.threats
-    .map((t) => {
-      if (typeof t === 'object' && t !== null) {
-        const obj = t as Record<string, unknown>;
-        if (typeof obj['label'] === 'string' && typeof obj['detail'] === 'string') {
-          return { label: obj['label'], detail: obj['detail'] };
-        }
-      }
-      return null;
-    })
-    .filter((t): t is { label: string; detail: string } => t !== null);
+  const threats: GameplanHighlightDisplay[] = mapPokemonHighlights(
+    section.threats,
+    teams.ours,
+    teams.opponent,
+  );
+  const strengths: GameplanHighlightDisplay[] = mapPokemonHighlights(
+    section.strengths,
+    teams.ours,
+    teams.opponent,
+  );
 
   return {
     opening: section.opening,
     midgame: section.midgame,
     endgame: section.endgame,
     threats,
-    preserve: section.preserve,
-    eliminate: section.eliminate,
-    adaptations: section.adaptations,
+    strengths,
     winCondition: win.description,
+    winConditionRationale: win.rationale,
     refinementSequences: [],
     sampleLimitation: limitations.join(' ') || win.rationale,
   };

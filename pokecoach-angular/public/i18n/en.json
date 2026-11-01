@@ -38,15 +38,14 @@
     "endgame": "End game",
     "win": "Win condition",
     "threats": "Threats",
-    "preserve": "Preserve",
-    "eliminate": "Eliminate",
-    "adaptations": "Adaptations",
-    "supplementary": "Additional information"
+    "strengths": "Our strengths",
+    "generating": "Generating strategic synthesis…",
+    "synthesisUnavailable": "LLM synthesis is not configured on the server."
   },
   "analysis": {
     "analyze": "Analyze this matchup",
     "launching": "Starting…",
-    "helperIdle": "A→C→B→D analysis runs when phases are available; pauses after target or last implemented phase.",
+    "helperIdle": "A→C→B→D analysis then gameplan synthesis when LLM is configured; pauses after target or last implemented phase.",
     "helperUnavailable": "Analysis unavailable (Python API or worker).",
     "helperRunning": "Analysis running — partial results will appear here.",
     "helperPaused": "Step complete for now. Start again to continue.",
@@ -110,7 +109,8 @@
     "A": "Observing opponent leads",
     "C": "Selecting our bring",
     "B": "Conditioned openings",
-    "D": "Refinement"
+    "D": "Refinement",
+    "synthesis": "Strategic synthesis"
   },
   "home": {
     "title": "Our teams",

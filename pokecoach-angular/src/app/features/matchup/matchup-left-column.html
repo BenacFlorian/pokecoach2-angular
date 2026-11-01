@@ -59,7 +59,13 @@
     <p class="tw:text-base-content/70 tw:m-0">{{ 'common.notCalculated' | transloco }}</p>
   }
 
-  <app-gameplan-tab [ourTeam]="ourTeam()" [opponentTeam]="opponentTeam()" [gameplan]="gameplan()" />
+  <app-gameplan-tab
+    [ourTeam]="ourTeam()"
+    [opponentTeam]="opponentTeam()"
+    [gameplan]="gameplan()"
+    [generating]="gameplanGenerating()"
+    [synthesisUnavailable]="synthesisUnavailable()"
+  />
 
   <app-refinement-scenarios-modal
     [ourTeam]="ourTeam()"

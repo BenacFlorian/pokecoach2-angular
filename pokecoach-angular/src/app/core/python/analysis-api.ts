@@ -28,7 +28,15 @@ function validateCapabilitiesBody(body: AnalysisCapabilitiesResponse): AnalysisC
   ) {
     throw new AnalysisError('response', 'Réponse de capacités invalide.');
   }
-  if (body.phases.length === 0 || body.regulations.length === 0) {
+  if (body.regulations.length === 0) {
+    throw new AnalysisError(
+      'capabilities',
+      'Aucune analyse n’est disponible pour le moment.',
+      { retryable: true },
+    );
+  }
+  const synthesisAvailable = body.synthesisAvailable === true;
+  if (body.phases.length === 0 && !synthesisAvailable) {
     throw new AnalysisError(
       'capabilities',
       'Aucune analyse n’est disponible pour le moment.',

@@ -503,6 +503,53 @@ function parseSlotPair(raw: unknown): ParseResult<[number, number]> {
   return { ok: true, value: [a, b] };
 }
 
+function parsePokemonHighlight(raw: unknown): ParseResult<import('../models/simulation-result.model').PokemonHighlightV2> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
+    return { ok: false, message: 'PokemonHighlight invalid' };
+  }
+  const obj = raw as Record<string, unknown>;
+  const pokemon = obj['pokemon'];
+  if (typeof pokemon !== 'object' || pokemon === null || Array.isArray(pokemon)) {
+    return { ok: false, message: 'PokemonHighlight.pokemon invalid' };
+  }
+  const pref = pokemon as Record<string, unknown>;
+  const side = pref['side'];
+  const slot = pref['slot'];
+  if (side !== 'ours' && side !== 'opponent') {
+    return { ok: false, message: 'PokemonHighlight side invalid' };
+  }
+  if (typeof slot !== 'number' || slot < 0 || slot > 5) {
+    return { ok: false, message: 'PokemonHighlight slot invalid' };
+  }
+  if (typeof obj['explanation'] !== 'string' || !obj['explanation'].trim()) {
+    return { ok: false, message: 'PokemonHighlight explanation required' };
+  }
+  return {
+    ok: true,
+    value: {
+      pokemon: { side, slot },
+      explanation: obj['explanation'] as string,
+    },
+  };
+}
+
+function parseHighlightList(
+  raw: unknown,
+): ParseResult<import('../models/simulation-result.model').PokemonHighlightV2[]> {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 2) {
+    return { ok: false, message: 'highlight list invalid' };
+  }
+  const out: import('../models/simulation-result.model').PokemonHighlightV2[] = [];
+  for (const item of raw) {
+    const parsed = parsePokemonHighlight(item);
+    if (!parsed.ok) {
+      return parsed;
+    }
+    out.push(parsed.value);
+  }
+  return { ok: true, value: out };
+}
+
 function parseGameplanSection(
   raw: unknown,
 ): ParseResult<SimulationResultV2['gameplan']> {
@@ -518,11 +565,16 @@ function parseGameplanSection(
       return { ok: false, message: `gameplan.${key} required` };
     }
   }
-  if (!Array.isArray(obj['threats']) || !Array.isArray(obj['preserve']) || !Array.isArray(obj['eliminate'])) {
-    return { ok: false, message: 'gameplan lists invalid' };
+  const threats = parseHighlightList(obj['threats']);
+  if (!threats.ok) {
+    return { ok: false, message: 'gameplan threats invalid' };
   }
-  if (!Array.isArray(obj['adaptations']) || !Array.isArray(obj['evidenceBattleIds'])) {
-    return { ok: false, message: 'gameplan adaptations/evidence invalid' };
+  const strengths = parseHighlightList(obj['strengths']);
+  if (!strengths.ok) {
+    return { ok: false, message: 'gameplan strengths invalid' };
+  }
+  if (!Array.isArray(obj['evidenceBattleIds'])) {
+    return { ok: false, message: 'gameplan evidenceBattleIds invalid' };
   }
   return {
     ok: true,
@@ -530,10 +582,8 @@ function parseGameplanSection(
       opening: obj['opening'] as string,
       midgame: obj['midgame'] as string,
       endgame: obj['endgame'] as string,
-      threats: obj['threats'],
-      preserve: obj['preserve'] as string[],
-      eliminate: obj['eliminate'] as string[],
-      adaptations: obj['adaptations'] as string[],
+      threats: threats.value,
+      strengths: strengths.value,
       evidenceBattleIds: obj['evidenceBattleIds'] as string[],
     },
   };

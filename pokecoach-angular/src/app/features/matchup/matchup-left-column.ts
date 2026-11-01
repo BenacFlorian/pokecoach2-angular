@@ -41,6 +41,8 @@ export class MatchupLeftColumn {
   readonly selectionDetails = input<SelectionDetailsDisplay | null>(null);
   readonly refinement = input<RefinementSectionV2 | null>(null);
   readonly gameplan = input<GameplanReport | null>(null);
+  readonly gameplanGenerating = input(false);
+  readonly synthesisUnavailable = input(false);
 
   readonly scenariosModal = viewChild(RefinementScenariosModal);
   readonly selectionModal = viewChild(SelectionDetailModal);

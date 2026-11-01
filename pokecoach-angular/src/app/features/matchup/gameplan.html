@@ -12,52 +12,45 @@
       <h3 class="tw:m-0">{{ 'gameplan.endgame' | transloco }}</h3>
       <p class="tw:m-0">{{ plan.endgame }}</p>
     </article>
+
+    @if (plan.threats.length) {
+      <article class="tw:border-2 tw:border-base-content/20 tw:rounded-box tw:p-3">
+        <h3 class="tw:m-0">{{ 'gameplan.threats' | transloco }}</h3>
+        <ol class="tw:list-decimal tw:pl-4 tw:mb-0 tw:mt-2">
+          @for (t of plan.threats; track t.label) {
+            <li><strong>{{ t.label }}</strong> — {{ t.detail }}</li>
+          }
+        </ol>
+      </article>
+    }
+
+    @if (plan.strengths.length) {
+      <article class="tw:border-2 tw:border-base-content/20 tw:rounded-box tw:p-3">
+        <h3 class="tw:m-0">{{ 'gameplan.strengths' | transloco }}</h3>
+        <ol class="tw:list-decimal tw:pl-4 tw:mb-0 tw:mt-2">
+          @for (s of plan.strengths; track s.label) {
+            <li><strong>{{ s.label }}</strong> — {{ s.detail }}</li>
+          }
+        </ol>
+      </article>
+    }
+
     <article class="tw:border-2 tw:border-base-content/20 tw:rounded-box tw:p-3">
       <h3 class="tw:m-0">{{ 'gameplan.win' | transloco }}</h3>
       <p class="tw:m-0">{{ plan.winCondition }}</p>
+      @if (plan.winConditionRationale) {
+        <p class="tw:text-sm tw:text-base-content/70 tw:mb-0 tw:mt-2">{{ plan.winConditionRationale }}</p>
+      }
     </article>
 
-    <details class="tw:border-2 tw:border-base-content/20 tw:rounded-box tw:p-3">
-      <summary class="tw:font-medium">{{ 'gameplan.supplementary' | transloco }}</summary>
-      <div class="tw:flex tw:flex-col tw:gap-4 tw:mt-3">
-        <article>
-          <h4 class="tw:m-0 tw:text-sm tw:font-semibold">{{ 'gameplan.threats' | transloco }}</h4>
-          <ol class="tw:list-decimal tw:pl-4 tw:mb-0">
-            @for (t of plan.threats; track t.label) {
-              <li><strong>{{ t.label }}</strong> — {{ t.detail }}</li>
-            }
-          </ol>
-        </article>
-        <article>
-          <h4 class="tw:m-0 tw:text-sm tw:font-semibold">{{ 'gameplan.preserve' | transloco }}</h4>
-          <ul class="tw:list-disc tw:pl-4 tw:mb-0">
-            @for (p of plan.preserve; track p) {
-              <li>{{ p }}</li>
-            }
-          </ul>
-        </article>
-        <article>
-          <h4 class="tw:m-0 tw:text-sm tw:font-semibold">{{ 'gameplan.eliminate' | transloco }}</h4>
-          <ul class="tw:list-disc tw:pl-4 tw:mb-0">
-            @for (e of plan.eliminate; track e) {
-              <li>{{ e }}</li>
-            }
-          </ul>
-        </article>
-        <article>
-          <h4 class="tw:m-0 tw:text-sm tw:font-semibold">{{ 'gameplan.adaptations' | transloco }}</h4>
-          <ul class="tw:list-disc tw:pl-4 tw:mb-0">
-            @for (a of plan.adaptations; track a) {
-              <li>{{ a }}</li>
-            }
-          </ul>
-        </article>
-        @if (plan.sampleLimitation) {
-          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">{{ plan.sampleLimitation }}</p>
-        }
-      </div>
-    </details>
+    @if (plan.sampleLimitation) {
+      <p class="tw:text-sm tw:text-base-content/70 tw:m-0">{{ plan.sampleLimitation }}</p>
+    }
   </div>
+} @else if (generating()) {
+  <p class="tw:text-base-content/70 tw:m-0">{{ 'gameplan.generating' | transloco }}</p>
+} @else if (synthesisUnavailable()) {
+  <p class="tw:text-base-content/70 tw:m-0">{{ 'gameplan.synthesisUnavailable' | transloco }}</p>
 } @else {
   <p class="tw:text-base-content/70 tw:m-0">{{ 'common.notCalculated' | transloco }}</p>
 }

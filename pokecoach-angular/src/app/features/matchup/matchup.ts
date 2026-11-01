@@ -302,6 +302,37 @@ export class Matchup {
     return this.runResult()?.report.gameplan ?? null;
   }
 
+  gameplanGenerating(): boolean {
+    const run = this.selectedRunSummary();
+    if (!run || run.status !== 'running') {
+      return false;
+    }
+    if (run.targetPhase === 'synthesis') {
+      return true;
+    }
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      return view.view.targetPhase === 'synthesis';
+    }
+    return false;
+  }
+
+  synthesisUnavailableForView(): boolean {
+    if (this.gameplanForView() || this.gameplanGenerating()) {
+      return false;
+    }
+    const caps = this.capabilities();
+    if (caps?.synthesisAvailable) {
+      return false;
+    }
+    const view = this.selectedRunView();
+    if (view?.kind === 'simulation') {
+      const phases = view.view.partialResult.completedPhases;
+      return phases.includes('D') && !phases.includes('synthesis');
+    }
+    return false;
+  }
+
   progressHint(): string | null {
     const run = this.selectedRunSummary();
     if (!run) {

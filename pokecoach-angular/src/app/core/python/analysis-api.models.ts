@@ -1,5 +1,7 @@
 /** Contrat HTTP aligné sur la spec workflow §2 (réponses camelCase). */
 
+import type { AppLocale } from '../i18n/locale.service';
+
 export const ANALYSIS_PHASE_ORDER = ['A', 'C', 'B', 'D', 'synthesis'] as const;
 
 export type AnalysisPhase = (typeof ANALYSIS_PHASE_ORDER)[number];
@@ -10,6 +12,7 @@ export interface AnalysisCapabilitiesResponse {
   phaseOrder?: string[];
   profiles: string[];
   regulations: string[];
+  synthesisAvailable?: boolean;
 }
 
 export interface AnalysisCapabilitiesView {
@@ -17,12 +20,14 @@ export interface AnalysisCapabilitiesView {
   phaseOrder: string[];
   profiles: AnalysisProfile[];
   regulations: string[];
-  defaultTargetPhase: string;
+  synthesisAvailable: boolean;
+  defaultTargetPhase: string | null;
 }
 
 export interface AnalysisStartRequest {
   targetPhase: string;
   profile: AnalysisProfile;
+  locale: AppLocale;
 }
 
 export interface AnalysisContinueRequest {
@@ -75,14 +80,19 @@ export function mapCapabilitiesView(
       ? [...body.phaseOrder]
       : [...ANALYSIS_PHASE_ORDER];
   const phases = [...body.phases];
-  const defaultTargetPhase = phases.includes('synthesis')
-    ? 'synthesis'
-    : highestDeployedPhase(phases, phaseOrder);
+  const synthesisAvailable = body.synthesisAvailable === true;
+  const defaultTargetPhase =
+    phases.length > 0
+      ? synthesisAvailable
+        ? 'synthesis'
+        : highestDeployedPhase(phases, phaseOrder)
+      : null;
   return {
     phases,
     phaseOrder,
     profiles,
     regulations: [...body.regulations],
+    synthesisAvailable,
     defaultTargetPhase,
   };
 }
@@ -97,6 +107,8 @@ export function phaseProgressLabel(phase: string): string {
       return 'Étude des ouvertures face à notre sélection';
     case 'D':
       return 'Affinage ciblé';
+    case 'synthesis':
+      return 'Synthèse stratégique';
     default:
       return phase;
   }

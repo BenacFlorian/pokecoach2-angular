@@ -9,6 +9,7 @@ import {
 } from '../../core/python/analysis-api.models';
 import { AnalysisApi } from '../../core/python/analysis-api';
 import { AnalysisError } from '../../core/python/analysis-error';
+import { LocaleService } from '../../core/i18n/locale.service';
 
 @Component({
   selector: 'app-analysis-controls',
@@ -31,6 +32,7 @@ export class AnalysisControls {
   private readonly store = inject(CoachStore);
   private readonly router = inject(Router);
   private readonly transloco = inject(TranslocoService);
+  private readonly locale = inject(LocaleService);
 
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
@@ -43,6 +45,9 @@ export class AnalysisControls {
       return false;
     }
     if (run && (run.status === 'queued' || run.status === 'running')) {
+      return false;
+    }
+    if (!caps.defaultTargetPhase) {
       return false;
     }
     return caps.phases.length > 0;
@@ -76,6 +81,9 @@ export class AnalysisControls {
       return;
     }
     const targetPhase = caps.defaultTargetPhase;
+    if (!targetPhase) {
+      return;
+    }
     const profile: AnalysisProfile = 'standard';
 
     this.busy.set(true);
@@ -84,7 +92,13 @@ export class AnalysisControls {
       this.startKey = crypto.randomUUID();
     }
 
-    this.api.start(this.matchupId(), { targetPhase, profile }, this.startKey).subscribe({
+    this.api
+      .start(
+        this.matchupId(),
+        { targetPhase, profile, locale: this.locale.active() },
+        this.startKey,
+      )
+      .subscribe({
       next: (res) => {
         this.busy.set(false);
         this.startKey = null;

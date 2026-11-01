@@ -72,14 +72,17 @@ export interface RefinementSectionV2 {
   limitations: string[];
 }
 
+export interface PokemonHighlightV2 {
+  pokemon: { side: 'ours' | 'opponent'; slot: number };
+  explanation: string;
+}
+
 export interface GameplanSectionV2 {
   opening: string;
   midgame: string;
   endgame: string;
-  threats: unknown[];
-  preserve: string[];
-  eliminate: string[];
-  adaptations: string[];
+  threats: PokemonHighlightV2[];
+  strengths: PokemonHighlightV2[];
   evidenceBattleIds: string[];
 }
 

@@ -7,6 +7,7 @@ import type { MatchupSummary } from '../graphql/coach-mappers';
 import { AnalysisApi } from '../python/analysis-api';
 import type { AnalysisCapabilitiesView, AnalysisStartRequest } from '../python/analysis-api.models';
 import { analysisErrorMessage, AnalysisError } from '../python/analysis-error';
+import { LocaleService } from '../i18n/locale.service';
 import {
   clearPendingAnalysisMarker,
   writePendingAnalysisMarker,
@@ -47,6 +48,7 @@ export class MatchupPreparation {
   private readonly store = inject(CoachStore);
   private readonly analysisApi = inject(AnalysisApi);
   private readonly router = inject(Router);
+  private readonly locale = inject(LocaleService);
 
   private readonly phase = signal<MatchupPreparationPhase>('idle');
   private readonly teamId = signal<string | null>(null);
@@ -136,7 +138,11 @@ export class MatchupPreparation {
       matchupId: ids.matchupId,
       opponentId: ids.opponentId,
       idempotencyKey: crypto.randomUUID(),
-      requestBody: { targetPhase: 'A', profile: 'standard' },
+      requestBody: {
+        targetPhase: 'A',
+        profile: 'standard',
+        locale: this.locale.active(),
+      },
     };
     this.matchupId.set(ids.matchupId);
     this.opponentId.set(ids.opponentId);

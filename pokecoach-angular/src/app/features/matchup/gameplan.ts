@@ -12,4 +12,6 @@ export class GameplanTab {
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
   readonly gameplan = input<GameplanReport | null>(null);
+  readonly generating = input(false);
+  readonly synthesisUnavailable = input(false);
 }

@@ -638,7 +638,10 @@ export function mapSimulationRunView(
         executionMetadata: node.executionMetadata ?? {},
         ourTeamSnapshot,
         opponentTeamSnapshot,
-        tabDisplay: mapSimulationToTabDisplay(validated.value),
+        tabDisplay: mapSimulationToTabDisplay(validated.value, {
+          ours: ourTeamSnapshot,
+          opponent: opponentTeamSnapshot,
+        }),
         provenance: node.provenance ?? {},
       },
     };
