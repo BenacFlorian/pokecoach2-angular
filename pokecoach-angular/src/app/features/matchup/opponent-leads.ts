@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { TranslocoPipe } from '@jsverse/transloco';
 import type { OpponentLeadStats } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
 import {
@@ -10,7 +11,7 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
 
 @Component({
   selector: 'app-opponent-leads',
-  imports: [PokemonPortrait],
+  imports: [PokemonPortrait, TranslocoPipe],
   templateUrl: './opponent-leads.html',
 })
 export class OpponentLeads {

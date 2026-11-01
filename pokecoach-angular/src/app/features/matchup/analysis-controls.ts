@@ -1,7 +1,8 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { CoachStore } from '../../core/data/coach-store';
-import type { RunSummary } from '../../core/graphql/coach-mappers';
+import type { RunProgress, RunSummary } from '../../core/graphql/coach-mappers';
 import {
   type AnalysisCapabilitiesView,
   type AnalysisProfile,
@@ -11,6 +12,7 @@ import { AnalysisError } from '../../core/python/analysis-error';
 
 @Component({
   selector: 'app-analysis-controls',
+  imports: [TranslocoPipe],
   templateUrl: './analysis-controls.html',
 })
 export class AnalysisControls {
@@ -18,6 +20,8 @@ export class AnalysisControls {
   readonly matchupId = input.required<string>();
   readonly selectedRun = input<RunSummary | null>(null);
   readonly capabilities = input<AnalysisCapabilitiesView | null>(null);
+  readonly progressBar = input<RunProgress | null>(null);
+  readonly progressHint = input<string | null>(null);
 
   readonly runStarted = output<string>();
   readonly commandError = output<string>();
@@ -25,11 +29,11 @@ export class AnalysisControls {
   private readonly api = inject(AnalysisApi);
   private readonly store = inject(CoachStore);
   private readonly router = inject(Router);
+  private readonly transloco = inject(TranslocoService);
 
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   private startKey: string | null = null;
-  private continueKey: string | null = null;
 
   readonly canStart = computed(() => {
     const caps = this.capabilities();
@@ -43,12 +47,6 @@ export class AnalysisControls {
     return caps.phases.length > 0;
   });
 
-  readonly canContinue = computed(() => {
-    const run = this.selectedRun();
-    const caps = this.capabilities();
-    return Boolean(run?.status === 'paused' && caps && !this.busy());
-  });
-
   readonly canCancel = computed(() => {
     const run = this.selectedRun();
     return Boolean(run && (run.status === 'queued' || run.status === 'running') && !this.busy());
@@ -56,16 +54,16 @@ export class AnalysisControls {
 
   readonly helperText = computed(() => {
     if (!this.capabilities()) {
-      return 'Analyse indisponible (API Python ou worker).';
+      return this.transloco.translate('analysis.helperUnavailable');
     }
     const run = this.selectedRun();
     if (run?.status === 'queued' || run?.status === 'running') {
-      return 'Analyse en cours — les résultats partiels apparaîtront ici.';
+      return this.transloco.translate('analysis.helperRunning');
     }
     if (run?.status === 'paused') {
-      return 'Étape terminée pour l’instant. « Continuer » enchaînera les phases suivantes quand elles seront disponibles.';
+      return this.transloco.translate('analysis.helperPaused');
     }
-    return 'Analyse A→C→B→D enchaînées quand les phases sont disponibles ; pause après la cible ou la dernière phase implémentée.';
+    return this.transloco.translate('analysis.helperIdle');
   });
 
   launch(): void {
@@ -98,40 +96,14 @@ export class AnalysisControls {
       },
       error: (err: unknown) => {
         this.busy.set(false);
-        const msg = err instanceof AnalysisError ? err.message : 'Échec du lancement.';
+        const msg =
+          err instanceof AnalysisError
+            ? err.message
+            : this.transloco.translate('analysis.launchFailed');
         this.error.set(msg);
         this.commandError.emit(msg);
       },
     });
-  }
-
-  continueRun(): void {
-    const run = this.selectedRun();
-    const caps = this.capabilities();
-    if (!run || !caps || !this.canContinue()) {
-      return;
-    }
-    this.busy.set(true);
-    this.error.set(null);
-    if (!this.continueKey) {
-      this.continueKey = crypto.randomUUID();
-    }
-    this.api
-      .continue(run.id, { targetPhase: caps.defaultTargetPhase }, this.continueKey)
-      .subscribe({
-        next: () => {
-          this.busy.set(false);
-          this.continueKey = null;
-          this.store.refreshMatchup(this.teamId(), this.matchupId());
-          this.store.refreshRun(this.teamId(), this.matchupId(), run.id);
-        },
-        error: (err: unknown) => {
-          this.busy.set(false);
-          const msg =
-            err instanceof AnalysisError ? err.message : 'Échec de la continuation.';
-          this.error.set(msg);
-        },
-      });
   }
 
   cancelRun(): void {
@@ -147,7 +119,10 @@ export class AnalysisControls {
       },
       error: (err: unknown) => {
         this.busy.set(false);
-        const msg = err instanceof AnalysisError ? err.message : 'Annulation impossible.';
+        const msg =
+          err instanceof AnalysisError
+            ? err.message
+            : this.transloco.translate('analysis.cancelFailed');
         this.error.set(msg);
       },
     });

@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "brand": "pokecoach",
+    "backTeam": "← Our team",
+    "langFr": "FR",
+    "langEn": "EN",
+    "langToggleAria": "Switch language"
+  },
+  "common": {
+    "vs": "VS",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "notCalculated": "Not calculated yet",
+    "noObservation": "No observations"
+  },
+  "matchup": {
+    "notFound": "This matchup was not found for this team.",
+    "backTeam": "Back to team",
+    "ourTeam": "Our team",
+    "opponentTeam": "Opponent team",
+    "tabsAria": "Matchup analysis",
+    "tabOpponentPicks": "Opponent picks",
+    "tabLeadT1": "Lead & T1",
+    "tabGameplan": "Gameplan"
+  },
+  "analysis": {
+    "analyze": "Analyze this matchup",
+    "launching": "Starting…",
+    "helperIdle": "A→C→B→D analysis runs when phases are available; pauses after target or last implemented phase.",
+    "helperUnavailable": "Analysis unavailable (Python API or worker).",
+    "helperRunning": "Analysis running — partial results will appear here.",
+    "helperPaused": "Step complete for now. Start again to continue.",
+    "launchFailed": "Failed to start analysis.",
+    "cancelFailed": "Could not cancel."
+  },
+  "runStatus": {
+    "none": "Matchup saved — no analysis yet",
+    "runMissing": "Run not found for this matchup.",
+    "cancelled": "Analysis cancelled",
+    "paused": "Paused after {{phase}} — partial results available",
+    "failed": "Latest analysis failed.",
+    "queued": "Analysis queued",
+    "stats": "Computing statistics",
+    "simulations": "Battle simulations in progress",
+    "running": "Analysis in progress"
+  },
+  "opponentLeads": {
+    "listTitle": "Opponent leads",
+    "backsPending": "Opponent backs will be computed at the openings step (vs our recommended selection).",
+    "backsContext": "Back observed vs our recommended selection (phase B).",
+    "backPairs": "Back pairs",
+    "backMarginals": "Individual back presence",
+    "marginalHint": "Non-exclusive counts (two slots per observed pair).",
+    "turn1EndNotes": "End of turn 1 notes"
+  },
+  "leadPick": {
+    "ourFour": "Our four",
+    "leadTag": "Lead",
+    "backTag": "Back",
+    "openingsPending": "Openings for this selection will be computed in the next step (phase B).",
+    "previewSuffix": "in preview",
+    "oppTurn1": "Possible opponent turn 1",
+    "primary": "Main choice:",
+    "oppAlternatives": "Other observed choices",
+    "ourTurn1": "Our recommended turn 1",
+    "recoHint": "Most frequent model choice for this matchup.",
+    "ourAlternatives": "Other model choices",
+    "endNotes": "End-of-turn notes",
+    "comparisons": "Compared compositions",
+    "winsSuffix": "wins",
+    "refinementTitle": "Refinement (phase D)",
+    "refinementGlobalTitle": "Overall evaluation of our selection",
+    "refinementSamplingHint": "Opponent scenarios sampled from observed lead frequencies (phase A) and back frequencies (phase B, given lead).",
+    "refinementGlobalOutcomes": "Over {{sample}} full battles: {{wins}} wins, {{losses}} losses, {{draws}} draws",
+    "refinementWinRate": "Win rate: {{rate}}",
+    "refinementScenarioBreakdown": "Simulated scenario breakdown",
+    "refinementScenarioCount": "{{count}}/{{sample}} ({{percent}})",
+    "refinementTurn1None": "No exploitable turn 1 in these simulations.",
+    "refinementTurn1": "Observed first turns (D)",
+    "leadMatchupAria": "Our lead {{ours}} vs {{opp}}"
+  },
+  "pokemonDetail": {
+    "ability": "Ability",
+    "item": "Item",
+    "nature": "Nature",
+    "moves": "Moves",
+    "empty": "No Showdown details stored for this Pokémon."
+  },
+  "phases": {
+    "A": "Observing opponent leads",
+    "C": "Selecting our bring",
+    "B": "Conditioned openings",
+    "D": "Refinement"
+  },
+  "home": {
+    "title": "Our teams",
+    "addTeam": "Add a team",
+    "empty": "No teams yet. Add yours to get started.",
+    "pokepasteLink": "View Poképaste",
+    "localSource": "Local Showdown source",
+    "loadMore": "Load more"
+  },
+  "teamDetail": {
+    "notFound": "This team was not found.",
+    "backHome": "Back to home",
+    "prepareMatchup": "Prepare a matchup",
+    "matchupsTitle": "Prepared matchups",
+    "noMatchups": "No opponents prepared yet.",
+    "loadMore": "Load more"
+  }
+}

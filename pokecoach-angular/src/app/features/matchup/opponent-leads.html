@@ -1,11 +1,11 @@
 <div
-  class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:items-start"
+  class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:h-full tw:items-stretch"
 >
   @if (leads() === null) {
-    <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+    <p class="tw:text-base-content/70 tw:m-0">{{ 'common.notCalculated' | transloco }}</p>
   } @else {
-  <div class="tw:flex tw:flex-col tw:gap-2">
-    <h3 class="tw:m-0" i18n="@@opponentLeads.listTitle">Leads adverses</h3>
+  <div class="tw:flex tw:flex-col tw:gap-2 tw:min-h-0 tw:overflow-y-auto tw:pr-1">
+    <h3 class="tw:m-0 tw:shrink-0">{{ 'opponentLeads.listTitle' | transloco }}</h3>
     <ul class="tw:flex tw:flex-col tw:gap-2" role="list">
       @for (lead of sortedLeads(); track lead.id) {
         <li>
@@ -30,20 +30,20 @@
   </div>
 
   @if (activeLead(); as active) {
-    <div class="tw:flex tw:flex-col tw:gap-4">
+    <div class="tw:flex tw:flex-col tw:gap-4 tw:min-h-0 tw:overflow-y-auto tw:pl-1">
       @if (backsPending()) {
-        <p class="tw:text-base-content/70 tw:m-0" i18n="@@opponentLeads.backsPending">
-          Les backs adverses seront observés à l’étape des ouvertures (face à notre sélection recommandée).
-        </p>
+        <p class="tw:text-base-content/70 tw:m-0">{{ 'opponentLeads.backsPending' | transloco }}</p>
       } @else {
-      <p class="tw:text-sm tw:text-base-content/80 tw:m-0" i18n="@@opponentLeads.backsContext">
-        Back observé face à notre sélection recommandée (phase B).
+      <p class="tw:text-sm tw:text-base-content/80 tw:m-0">
+        {{ 'opponentLeads.backsContext' | transloco }}
       </p>
 
       <section class="tw:flex tw:flex-col tw:gap-2">
-        <h3 class="tw:m-0" i18n="@@opponentLeads.backTitle">Paires de back</h3>
+        <h3 class="tw:m-0">{{ 'opponentLeads.backPairs' | transloco }}</h3>
         @if (sortedBackPairs().length === 0) {
-          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">Aucune observation</p>
+          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">
+            {{ 'common.noObservation' | transloco }}
+          </p>
         } @else {
         <div
           class="tw:flex tw:flex-row tw:w-full tw:gap-2 tw:items-center tw:border tw:border-base-300 tw:rounded-box tw:p-3"
@@ -65,9 +65,9 @@
 
       @if (sortedBackMarginals().length) {
         <section class="tw:flex tw:flex-col tw:gap-2">
-          <h3 class="tw:m-0" i18n="@@opponentLeads.backMarginalsTitle">Présence individuelle au back</h3>
-          <p class="tw:text-xs tw:text-base-content/60 tw:m-0" i18n="@@opponentLeads.marginalHint">
-            Présences non exclusives (deux slots comptés par paire observée).
+          <h3 class="tw:m-0">{{ 'opponentLeads.backMarginals' | transloco }}</h3>
+          <p class="tw:text-xs tw:text-base-content/60 tw:m-0">
+            {{ 'opponentLeads.marginalHint' | transloco }}
           </p>
           <div
             class="tw:flex tw:flex-row tw:w-full tw:gap-2 tw:items-center tw:border tw:border-base-300 tw:rounded-box tw:p-3"
@@ -85,6 +85,17 @@
               </div>
             }
           </div>
+        </section>
+      }
+
+      @if (active.turn1EndObservations.length) {
+        <section class="tw:flex tw:flex-col tw:gap-2">
+          <h3 class="tw:m-0">{{ 'opponentLeads.turn1EndNotes' | transloco }}</h3>
+          <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:m-0">
+            @for (note of active.turn1EndObservations; track note) {
+              <li>{{ note }}</li>
+            }
+          </ul>
         </section>
       }
       }

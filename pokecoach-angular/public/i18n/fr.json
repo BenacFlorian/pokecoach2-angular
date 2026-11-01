@@ -1,0 +1,111 @@
+{
+  "nav": {
+    "brand": "pokecoach",
+    "backTeam": "← Notre équipe",
+    "langFr": "FR",
+    "langEn": "EN",
+    "langToggleAria": "Changer la langue"
+  },
+  "common": {
+    "vs": "VS",
+    "retry": "Réessayer",
+    "cancel": "Annuler",
+    "notCalculated": "Pas encore calculé",
+    "noObservation": "Aucune observation"
+  },
+  "matchup": {
+    "notFound": "Ce matchup est introuvable pour cette équipe.",
+    "backTeam": "Retour à l’équipe",
+    "ourTeam": "Mon équipe",
+    "opponentTeam": "Équipe adverse",
+    "tabsAria": "Analyse du matchup",
+    "tabOpponentPicks": "Opponent picks",
+    "tabLeadT1": "Lead & T1",
+    "tabGameplan": "Gameplan"
+  },
+  "analysis": {
+    "analyze": "Analyser ce matchup",
+    "launching": "Lancement…",
+    "helperIdle": "Analyse A→C→B→D enchaînées quand les phases sont disponibles ; pause après la cible ou la dernière phase implémentée.",
+    "helperUnavailable": "Analyse indisponible (API Python ou worker).",
+    "helperRunning": "Analyse en cours — les résultats partiels apparaîtront ici.",
+    "helperPaused": "Étape terminée pour l’instant. Relancez une analyse pour continuer.",
+    "launchFailed": "Échec du lancement.",
+    "cancelFailed": "Annulation impossible."
+  },
+  "runStatus": {
+    "none": "Matchup enregistré — aucune analyse disponible",
+    "runMissing": "Run introuvable pour ce matchup.",
+    "cancelled": "Analyse annulée",
+    "paused": "En pause après {{phase}} — résultats partiels consultables",
+    "failed": "La dernière analyse a échoué.",
+    "queued": "Analyse en attente",
+    "stats": "Calcul des statistiques",
+    "simulations": "Simulations des parties en cours",
+    "running": "Analyse en cours"
+  },
+  "opponentLeads": {
+    "listTitle": "Leads adverses",
+    "backsPending": "Les backs adverses seront observés à l’étape des ouvertures (face à notre sélection recommandée).",
+    "backsContext": "Back observé face à notre sélection recommandée (phase B).",
+    "backPairs": "Paires de back",
+    "backMarginals": "Présence individuelle au back",
+    "marginalHint": "Présences non exclusives (deux slots comptés par paire observée).",
+    "turn1EndNotes": "Notes de fin de tour 1"
+  },
+  "leadPick": {
+    "ourFour": "Nos quatre",
+    "leadTag": "Lead",
+    "backTag": "Back",
+    "openingsPending": "Les ouvertures pour cette sélection seront calculées à l’étape suivante (phase B).",
+    "previewSuffix": "au preview",
+    "oppTurn1": "Tour 1 adverse possible",
+    "primary": "Choix principal :",
+    "oppAlternatives": "Autres choix observés",
+    "ourTurn1": "Notre tour 1 recommandé",
+    "recoHint": "Choix le plus fréquent du modèle pour cette confrontation.",
+    "ourAlternatives": "Autres choix de notre modèle",
+    "endNotes": "Observations de fin de tour",
+    "comparisons": "Compositions comparées",
+    "winsSuffix": "victoires",
+    "refinementTitle": "Affinage (phase D)",
+    "refinementGlobalTitle": "Évaluation globale de notre sélection",
+    "refinementSamplingHint": "Scénarios adverses tirés selon les fréquences observées des leads (phase A) et des backs (phase B, conditionnel au lead).",
+    "refinementGlobalOutcomes": "Sur {{sample}} combats complets : {{wins}} victoires, {{losses}} défaites, {{draws}} nuls",
+    "refinementWinRate": "Taux de victoire : {{rate}}",
+    "refinementScenarioBreakdown": "Répartition des scénarios simulés",
+    "refinementScenarioCount": "{{count}}/{{sample}} ({{percent}})",
+    "refinementTurn1None": "Aucun tour 1 exploitable dans ces simulations.",
+    "refinementTurn1": "Premiers tours observés (D)",
+    "leadMatchupAria": "Notre lead {{ours}} contre {{opp}}"
+  },
+  "pokemonDetail": {
+    "ability": "Talent",
+    "item": "Objet",
+    "nature": "Nature",
+    "moves": "Capacités",
+    "empty": "Aucun détail Showdown enregistré pour ce Pokémon."
+  },
+  "phases": {
+    "A": "Observation des leads adverses",
+    "C": "Sélection de notre bring",
+    "B": "Ouvertures conditionnées",
+    "D": "Affinage"
+  },
+  "home": {
+    "title": "Nos équipes",
+    "addTeam": "Ajouter une équipe",
+    "empty": "Aucune équipe enregistrée. Ajoutez la vôtre pour commencer.",
+    "pokepasteLink": "Voir le Poképaste",
+    "localSource": "Source Showdown locale",
+    "loadMore": "Charger la suite"
+  },
+  "teamDetail": {
+    "notFound": "Cette équipe est introuvable.",
+    "backHome": "Retour à l’accueil",
+    "prepareMatchup": "Préparer un match up",
+    "matchupsTitle": "Matchups préparés",
+    "noMatchups": "Aucun adversaire préparé pour le moment.",
+    "loadMore": "Charger la suite"
+  }
+}

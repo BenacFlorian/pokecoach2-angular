@@ -651,34 +651,38 @@ export function mapSimulationRunView(
   };
 }
 
-export function activeRunStatusMessage(run: RunSummary | null): string | null {
+export type RunStatusI18n = { key: string; params?: Record<string, string> };
+
+export function activeRunStatusMessage(run: RunSummary | null): RunStatusI18n | null {
   if (!run) {
     return null;
   }
   if (run.status === 'cancelled') {
-    return 'Analyse annulée';
+    return { key: 'runStatus.cancelled' };
   }
   if (run.status === 'paused') {
-    const phase = run.targetPhase ?? 'A';
-    return `En pause après ${phase} — résultats partiels consultables`;
+    return {
+      key: 'runStatus.paused',
+      params: { phase: run.targetPhase ?? 'A' },
+    };
   }
   if (run.status === 'failed' || run.processStatus === 'ERROR') {
-    return 'La dernière analyse a échoué.';
+    return { key: 'runStatus.failed' };
   }
   if (run.status === 'queued' || run.processStatus === 'INITIAL') {
-    return 'Analyse en attente';
+    return { key: 'runStatus.queued' };
   }
   if (run.status === 'running' && run.processStatus === 'PENDING_STATS') {
-    return 'Calcul des statistiques';
+    return { key: 'runStatus.stats' };
   }
   if (
     run.status === 'running' &&
     run.processStatus === 'PENDING_GAME_SIMULATIONS'
   ) {
-    return 'Simulations des parties en cours';
+    return { key: 'runStatus.simulations' };
   }
   if (run.status === 'running') {
-    return 'Analyse en cours';
+    return { key: 'runStatus.running' };
   }
   return null;
 }

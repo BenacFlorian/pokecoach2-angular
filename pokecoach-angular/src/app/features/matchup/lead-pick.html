@@ -1,16 +1,11 @@
 @if (recommendation(); as rec) {
 @let ours = ourTeam();
 <div
-  class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:items-start"
+  class="tw:grid tw:grid-cols-1 tw:lg:grid-cols-2 tw:gap-6 tw:min-h-0 tw:h-full tw:items-stretch"
 >
-  <div class="tw:flex tw:flex-col tw:gap-4">
-    @if (provenanceNote(); as note) {
-      <p class="tw:text-sm tw:text-base-content/70">{{ note }}</p>
-    }
-    <p>{{ rec.justification }}</p>
-
+  <div class="tw:flex tw:flex-col tw:gap-4 tw:min-h-0 tw:overflow-y-auto tw:pr-1">
     <div class="tw:flex tw:flex-col tw:gap-3">
-      <h3 class="tw:m-0" i18n="@@leadPick.ourFour">Nos quatre</h3>
+      <h3 class="tw:m-0">{{ 'leadPick.ourFour' | transloco }}</h3>
       <div class="tw:flex tw:flex-wrap tw:gap-4 tw:p-2">
         @for (slot of displayFourSlots(rec); track slot) {
           <div
@@ -18,45 +13,83 @@
             [class.tw:ring-2]="rec.ourLeadSlots.includes(slot)"
             [class.tw:ring-primary]="rec.ourLeadSlots.includes(slot)"
           >
-            <app-pokemon-portrait [pokemon]="ours.pokemon[slot]" />
+            <app-pokemon-portrait [pokemon]="ours.pokemon[slot]" [showSetDetails]="true" />
             @if (rec.ourLeadSlots.includes(slot)) {
-              <span class="tw:text-xs tw:block tw:text-center tw:mt-1" i18n="@@leadPick.leadTag"
-                >Lead</span
-              >
+              <span class="tw:text-xs tw:block tw:text-center tw:mt-1">{{
+                'leadPick.leadTag' | transloco
+              }}</span>
             } @else {
-              <span class="tw:text-xs tw:block tw:text-center tw:mt-1" i18n="@@leadPick.backTag"
-                >Back</span
-              >
+              <span class="tw:text-xs tw:block tw:text-center tw:mt-1">{{
+                'leadPick.backTag' | transloco
+              }}</span>
             }
           </div>
         }
       </div>
     </div>
+
+    @if (refinement(); as ref) {
+      <section class="tw:border tw:border-base-300 tw:rounded-box tw:p-4 tw:flex tw:flex-col tw:gap-3">
+        <h3 class="tw:m-0">{{ 'leadPick.refinementGlobalTitle' | transloco }}</h3>
+        <p class="tw:text-sm tw:text-base-content/80 tw:m-0">
+          {{ 'leadPick.refinementSamplingHint' | transloco }}
+        </p>
+        <p class="tw:text-sm tw:font-medium tw:m-0">{{ refinementSummaryLabel(ref) }}</p>
+        <p class="tw:text-sm tw:m-0">
+          {{ 'leadPick.refinementWinRate' | transloco: { rate: refinementWinRate(ref) } }}
+        </p>
+        @for (line of ref.limitations; track line) {
+          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">{{ line }}</p>
+        }
+        <details class="tw:text-sm">
+          <summary>{{ 'leadPick.refinementScenarioBreakdown' | transloco }}</summary>
+          <ul class="tw:list-none tw:pl-0 tw:mt-2 tw:flex tw:flex-col tw:gap-3">
+            @for (row of ref.scenarioCounts; track $index) {
+              <li class="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                <app-pokemon-portrait [pokemon]="opponentTeam().pokemon[row.opponentLeadSlots[0]]" />
+                <app-pokemon-portrait [pokemon]="opponentTeam().pokemon[row.opponentLeadSlots[1]]" />
+                <span class="tw:text-base-content/60">+</span>
+                <app-pokemon-portrait [pokemon]="opponentTeam().pokemon[row.opponentBackPair[0]]" />
+                <app-pokemon-portrait [pokemon]="opponentTeam().pokemon[row.opponentBackPair[1]]" />
+                <span class="tw:font-medium">{{ scenarioCountLabel(row, ref.sampleSize) }}</span>
+              </li>
+            }
+          </ul>
+        </details>
+        @if (ref.firstTurnSampleSize > 0) {
+          <p class="tw:text-sm tw:m-0">
+            {{ 'leadPick.refinementTurn1' | transloco }}
+            ({{ ref.firstTurnSampleSize }}/{{ ref.sampleSize }})
+          </p>
+          <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:m-0">
+            @for (row of ref.firstTurns; track $index) {
+              @if (formatRefinementTurnRow(row); as label) {
+                <li>{{ label }}</li>
+              }
+            }
+          </ul>
+        } @else {
+          <p class="tw:text-sm tw:text-base-content/70 tw:m-0">
+            {{ 'leadPick.refinementTurn1None' | transloco }}
+          </p>
+        }
+      </section>
+    }
   </div>
 
-  <div class="tw:flex tw:flex-col tw:gap-4">
+  <div class="tw:flex tw:flex-col tw:gap-4 tw:min-h-0 tw:overflow-y-auto tw:pl-1">
     @if (openingsPending()) {
-      <p class="tw:text-base-content/70 tw:m-0" i18n="@@leadPick.openingsPending">
-        Les ouvertures pour cette sélection seront calculées à l’étape suivante (phase B).
-      </p>
+      <p class="tw:text-base-content/70 tw:m-0">{{ 'leadPick.openingsPending' | transloco }}</p>
     } @else if (openings(); as cards) {
-      <p class="tw:text-sm tw:text-base-content/80 tw:m-0" i18n="@@leadPick.openingsContext">
-        Notre quatre et notre lead sont fixés. Les choix adverses et les nôtres sont des fréquences
-        observées avant résolution du tour — pas une réponse optimale à une action adverse précise.
-      </p>
       @for (study of cards; track study.opponentLeadId) {
-        <article class="tw:border tw:border-base-300 tw:rounded-box tw:p-4 tw:flex tw:flex-col tw:gap-3">
-          <div
-            class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-x-4 tw:gap-y-2"
+        <details
+          class="tw:border tw:border-base-300 tw:rounded-box tw:group tw:[&>summary]:tw:list-none"
+        >
+          <summary
+            class="tw:p-4 tw:cursor-pointer tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-3 hover:tw:bg-base-200/40 tw:rounded-box"
           >
-            <h4 class="tw:m-0 tw:min-w-0">
-              {{ leadLabelForStudy(study) }}
-              <span class="tw:text-sm tw:font-normal tw:text-base-content/70">
-                — {{ previewPercent(study.phaseACount, study.phaseASampleSize) }} au preview
-              </span>
-            </h4>
             <div
-              class="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:shrink-0 tw:rounded-box tw:border tw:border-base-300 tw:bg-base-200/50 tw:px-3 tw:py-2 tw:min-w-[11rem] tw:max-w-full [&_figcaption]:tw:hidden"
+              class="tw:flex tw:items-center tw:justify-between tw:gap-3 tw:shrink-0 tw:rounded-box tw:border tw:border-base-300 tw:bg-base-200/50 tw:px-3 tw:py-2 tw:min-w-[11rem] tw:w-full tw:max-w-full [&_figcaption]:tw:hidden"
               [attr.aria-label]="leadMatchupAriaLabel(study)"
             >
               <div class="tw:flex tw:items-center tw:gap-1">
@@ -64,8 +97,10 @@
                   <app-pokemon-portrait [pokemon]="ours.pokemon[slot]" />
                 }
               </div>
-              <span class="tw:text-sm tw:font-semibold tw:text-base-content/70 tw:px-1" aria-hidden="true"
-                >VS</span
+              <span
+                class="tw:text-sm tw:font-semibold tw:text-base-content/70 tw:px-1"
+                aria-hidden="true"
+                >{{ 'common.vs' | transloco }}</span
               >
               <div class="tw:flex tw:items-center tw:gap-1">
                 @for (slot of study.opponentLeadSlots; track slot) {
@@ -73,93 +108,107 @@
                 }
               </div>
             </div>
+            <span
+              class="tw:text-base-content/50 tw:text-xs tw:shrink-0 group-open:tw:rotate-180 tw:transition-transform"
+              aria-hidden="true"
+              >▼</span
+            >
+          </summary>
+
+          <div class="tw:px-4 tw:pb-4 tw:flex tw:flex-col tw:gap-3 tw:border-t tw:border-base-300">
+            <h4 class="tw:m-0 tw:min-w-0">
+              {{ leadLabelForStudy(study) }}
+              <span class="tw:text-sm tw:font-normal tw:text-base-content/70">
+                — {{ previewPercent(study.phaseACount, study.phaseASampleSize) }}
+                {{ 'leadPick.previewSuffix' | transloco }}
+              </span>
+            </h4>
+            <section>
+              <h5 class="tw:m-0 tw:text-sm tw:font-semibold">
+                {{ 'leadPick.oppTurn1' | transloco }}
+              </h5>
+              @if (study.opponentPrimary; as primary) {
+                <p class="tw:text-sm tw:mt-2 tw:m-0">
+                  <span class="tw:font-medium">{{ 'leadPick.primary' | transloco }}</span>
+                  {{ formatOppPair(study, primary) }}
+                  <span class="tw:text-base-content/70">({{ freqLabel(primary) }})</span>
+                </p>
+              } @else {
+                <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">
+                  {{ 'common.noObservation' | transloco }}
+                </p>
+              }
+              @if (study.opponentAlternatives.length) {
+                <details class="tw:mt-2">
+                  <summary class="tw:text-sm">{{ 'leadPick.oppAlternatives' | transloco }}</summary>
+                  <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+                    @for (alt of study.opponentAlternatives; track $index) {
+                      <li>
+                        {{ formatOppPair(study, alt) }}
+                        <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
+                      </li>
+                    }
+                  </ul>
+                </details>
+              }
+            </section>
+
+            <section>
+              <h5 class="tw:m-0 tw:text-sm tw:font-semibold">
+                {{ 'leadPick.ourTurn1' | transloco }}
+              </h5>
+              @if (study.recommendation; as reco) {
+                <p class="tw:text-sm tw:mt-2 tw:m-0">
+                  {{ formatOurPair(study, reco) }}
+                  <span class="tw:text-base-content/70">({{ freqLabel(reco) }})</span>
+                </p>
+                <p class="tw:text-xs tw:text-base-content/60 tw:m-0">
+                  {{ 'leadPick.recoHint' | transloco }}
+                </p>
+              } @else {
+                <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">
+                  {{ 'common.noObservation' | transloco }}
+                </p>
+              }
+              @if (study.ourAlternatives.length) {
+                <details class="tw:mt-2">
+                  <summary class="tw:text-sm">{{ 'leadPick.ourAlternatives' | transloco }}</summary>
+                  <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
+                    @for (alt of study.ourAlternatives; track $index) {
+                      <li>
+                        {{ formatOurPair(study, alt) }}
+                        <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
+                      </li>
+                    }
+                  </ul>
+                </details>
+              }
+            </section>
+
+            @if (study.endStateNotes.length) {
+              <details class="tw:text-sm">
+                <summary>{{ 'leadPick.endNotes' | transloco }}</summary>
+                <ul class="tw:list-disc tw:pl-4 tw:mt-2">
+                  @for (note of study.endStateNotes; track note) {
+                    <li>{{ note }}</li>
+                  }
+                </ul>
+              </details>
+            }
           </div>
-
-          <section>
-            <h5 class="tw:m-0 tw:text-sm tw:font-semibold" i18n="@@leadPick.oppTurn1">
-              Tour 1 adverse possible
-            </h5>
-            @if (study.opponentPrimary; as primary) {
-              <p class="tw:text-sm tw:mt-2 tw:m-0">
-                <span class="tw:font-medium" i18n="@@leadPick.primary">Choix principal :</span>
-                {{ formatOppPair(study, primary) }}
-                <span class="tw:text-base-content/70">({{ freqLabel(primary) }})</span>
-              </p>
-            } @else {
-              <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">Aucune observation</p>
-            }
-            @if (study.opponentAlternatives.length) {
-              <details class="tw:mt-2">
-                <summary class="tw:text-sm" i18n="@@leadPick.oppAlternatives">
-                  Autres choix observés
-                </summary>
-                <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
-                  @for (alt of study.opponentAlternatives; track $index) {
-                    <li>
-                      {{ formatOppPair(study, alt) }}
-                      <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
-                    </li>
-                  }
-                </ul>
-              </details>
-            }
-          </section>
-
-          <section>
-            <h5 class="tw:m-0 tw:text-sm tw:font-semibold" i18n="@@leadPick.ourTurn1">
-              Notre tour 1 recommandé
-            </h5>
-            @if (study.recommendation; as reco) {
-              <p class="tw:text-sm tw:mt-2 tw:m-0">
-                {{ formatOurPair(study, reco) }}
-                <span class="tw:text-base-content/70">({{ freqLabel(reco) }})</span>
-              </p>
-              <p class="tw:text-xs tw:text-base-content/60 tw:m-0" i18n="@@leadPick.recoHint">
-                Choix le plus fréquent du modèle pour cette confrontation.
-              </p>
-            } @else {
-              <p class="tw:text-sm tw:text-base-content/70 tw:mt-2 tw:m-0">Aucune observation</p>
-            }
-            @if (study.ourAlternatives.length) {
-              <details class="tw:mt-2">
-                <summary class="tw:text-sm" i18n="@@leadPick.ourAlternatives">
-                  Autres choix de notre modèle
-                </summary>
-                <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
-                  @for (alt of study.ourAlternatives; track $index) {
-                    <li>
-                      {{ formatOurPair(study, alt) }}
-                      <span class="tw:text-base-content/70">({{ freqLabel(alt) }})</span>
-                    </li>
-                  }
-                </ul>
-              </details>
-            }
-          </section>
-
-          @if (study.endStateNotes.length) {
-            <details class="tw:text-sm">
-              <summary i18n="@@leadPick.endNotes">Observations de fin de tour</summary>
-              <ul class="tw:list-disc tw:pl-4 tw:mt-2">
-                @for (note of study.endStateNotes; track note) {
-                  <li>{{ note }}</li>
-                }
-              </ul>
-            </details>
-          }
-        </article>
+        </details>
       }
     }
 
     @if (selections(); as comps) {
       <details class="tw:border tw:border-base-300 tw:rounded-box tw:p-4">
-        <summary i18n="@@leadPick.compositions">Compositions comparées</summary>
+        <summary>{{ 'leadPick.comparisons' | transloco }}</summary>
         <ul class="tw:list-disc tw:pl-4 tw:text-sm tw:mt-2">
           @for (sel of comps; track $index) {
             <li>
               {{ leadLabel(sel.opponentLeadId) }}
               @if (winRate(sel); as rate) {
-                — {{ rate }} victoires
+                — {{ rate }} {{ 'leadPick.winsSuffix' | transloco }}
               }
             </li>
           }
@@ -168,37 +217,6 @@
     }
   </div>
 </div>
-
-@if (refinement(); as ref) {
-  <section class="tw:mt-8 tw:border-t tw:border-base-300 tw:pt-6">
-    <h3 class="tw:m-0" i18n="@@leadPick.refinementTitle">Affinage (phase D)</h3>
-    @for (line of ref.limitations; track line) {
-      <p class="tw:text-sm tw:text-base-content/80 tw:mb-2">{{ line }}</p>
-    }
-    <p class="tw:text-sm tw:font-medium">{{ refinementOutcomeLabel(ref) }}</p>
-    <div class="tw:flex tw:flex-wrap tw:gap-4 tw:mt-3">
-      @for (slot of displayRefinementFour(ref); track slot) {
-        <div
-          class="tw:p-2 tw:rounded-box"
-          [class.tw:ring-2]="ref.configuration.ourLeadSlots.includes(slot)"
-          [class.tw:ring-secondary]="ref.configuration.ourLeadSlots.includes(slot)"
-        >
-          <app-pokemon-portrait [pokemon]="ourTeam().pokemon[slot]" />
-        </div>
-      }
-    </div>
-    @if (ref.firstTurns.length) {
-      <p class="tw:text-sm tw:mt-4" i18n="@@leadPick.refinementTurn1">Premiers tours observés (D)</p>
-      <ul class="tw:list-disc tw:pl-4 tw:text-sm">
-        @for (row of ref.firstTurns; track $index) {
-          @if (formatRefinementTurnRow(row); as label) {
-            <li>{{ label }}</li>
-          }
-        }
-      </ul>
-    }
-  </section>
-}
 } @else {
-  <p class="tw:text-base-content/70 tw:m-0">Pas encore calculé</p>
+  <p class="tw:text-base-content/70 tw:m-0">{{ 'common.notCalculated' | transloco }}</p>
 }

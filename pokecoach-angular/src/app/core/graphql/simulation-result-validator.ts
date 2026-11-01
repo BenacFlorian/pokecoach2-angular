@@ -1,5 +1,6 @@
 import type {
   LeadSelectionV2,
+  RefinementScenarioCountV2,
   SimulationPhase,
   SimulationResultV2,
 } from '../models/simulation-result.model';
@@ -409,26 +410,97 @@ function parseRefinementSection(
   if (!configuration.ok) {
     return { ok: false, message: 'refinement configuration invalid' };
   }
-  if (typeof obj['sampleSize'] !== 'number' || obj['sampleSize'] < 0) {
+  if (obj['samplingPolicy'] !== 'weighted-ab' || obj['samplingScope'] !== 'all-observed-leads') {
+    return { ok: false, message: 'refinement sampling metadata invalid' };
+  }
+  if (typeof obj['sampleSize'] !== 'number' || obj['sampleSize'] < 1) {
     return { ok: false, message: 'refinement.sampleSize invalid' };
   }
-  if (typeof obj['outcomes'] !== 'object' || obj['outcomes'] === null || Array.isArray(obj['outcomes'])) {
+  const outcomesRaw = obj['outcomes'];
+  if (typeof outcomesRaw !== 'object' || outcomesRaw === null || Array.isArray(outcomesRaw)) {
     return { ok: false, message: 'refinement.outcomes invalid' };
+  }
+  const wins = (outcomesRaw as Record<string, unknown>)['wins'];
+  const losses = (outcomesRaw as Record<string, unknown>)['losses'];
+  const draws = (outcomesRaw as Record<string, unknown>)['draws'];
+  if (
+    typeof wins !== 'number' ||
+    typeof losses !== 'number' ||
+    typeof draws !== 'number' ||
+    wins < 0 ||
+    losses < 0 ||
+    draws < 0 ||
+    wins + losses + draws !== obj['sampleSize']
+  ) {
+    return { ok: false, message: 'refinement outcomes must sum to sampleSize' };
+  }
+  if (typeof obj['firstTurnSampleSize'] !== 'number' || obj['firstTurnSampleSize'] < 0) {
+    return { ok: false, message: 'refinement.firstTurnSampleSize invalid' };
+  }
+  if (!Array.isArray(obj['scenarioCounts'])) {
+    return { ok: false, message: 'refinement.scenarioCounts invalid' };
+  }
+  const scenarioCounts: RefinementScenarioCountV2[] = [];
+  for (const row of obj['scenarioCounts']) {
+    if (typeof row !== 'object' || row === null || Array.isArray(row)) {
+      return { ok: false, message: 'refinement.scenarioCounts row invalid' };
+    }
+    const r = row as Record<string, unknown>;
+    if (typeof r['opponentLeadId'] !== 'string') {
+      return { ok: false, message: 'refinement.scenarioCounts row invalid' };
+    }
+    const leadSlots = parseSlotPair(r['opponentLeadSlots']);
+    const backPair = parseSlotPair(r['opponentBackPair']);
+    if (!leadSlots.ok || !backPair.ok) {
+      return { ok: false, message: 'refinement.scenarioCounts slots invalid' };
+    }
+    if (typeof r['count'] !== 'number' || r['count'] < 1) {
+      return { ok: false, message: 'refinement.scenarioCounts count invalid' };
+    }
+    scenarioCounts.push({
+      opponentLeadId: r['opponentLeadId'],
+      opponentLeadSlots: leadSlots.value,
+      opponentBackPair: backPair.value,
+      count: r['count'],
+    });
+  }
+  const scenarioTotal = scenarioCounts.reduce((s, row) => s + row.count, 0);
+  if (scenarioTotal !== obj['sampleSize']) {
+    return { ok: false, message: 'refinement.scenarioCounts must sum to sampleSize' };
   }
   if (!Array.isArray(obj['firstTurns']) || !Array.isArray(obj['battleIds']) || !Array.isArray(obj['limitations'])) {
     return { ok: false, message: 'refinement arrays invalid' };
+  }
+  if ((obj['battleIds'] as unknown[]).length !== obj['sampleSize']) {
+    return { ok: false, message: 'refinement.battleIds length invalid' };
   }
   return {
     ok: true,
     value: {
       configuration: configuration.value,
+      samplingPolicy: 'weighted-ab',
+      samplingScope: 'all-observed-leads',
       sampleSize: obj['sampleSize'],
-      outcomes: obj['outcomes'] as Record<string, number>,
+      outcomes: { wins, losses, draws },
+      scenarioCounts,
+      firstTurnSampleSize: obj['firstTurnSampleSize'],
       firstTurns: obj['firstTurns'],
       battleIds: obj['battleIds'] as string[],
       limitations: obj['limitations'] as string[],
     },
   };
+}
+
+function parseSlotPair(raw: unknown): ParseResult<[number, number]> {
+  if (!Array.isArray(raw) || raw.length !== 2) {
+    return { ok: false, message: 'slot pair invalid' };
+  }
+  const a = raw[0];
+  const b = raw[1];
+  if (typeof a !== 'number' || typeof b !== 'number' || a < 0 || a > 5 || b < 0 || b > 5) {
+    return { ok: false, message: 'slot pair invalid' };
+  }
+  return { ok: true, value: [a, b] };
 }
 
 function parseGameplanSection(

@@ -11,12 +11,13 @@ import { CoachStore } from '../../core/data/coach-store';
 import {
   activeRunStatusMessage,
   formatAnalysisProgressMessage,
-  runProvenanceBadge,
   shouldPollRun,
   type RunProgress,
   type RunResult,
+  type RunStatusI18n,
   type SelectedRunView,
 } from '../../core/graphql/coach-mappers';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type {
   GameplanReport,
   LeadRecommendation,
@@ -24,10 +25,7 @@ import type {
   SelectionResult,
 } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
-import {
-  type AnalysisCapabilitiesView,
-  phaseProgressLabel,
-} from '../../core/python/analysis-api.models';
+import { type AnalysisCapabilitiesView } from '../../core/python/analysis-api.models';
 import { AnalysisApi } from '../../core/python/analysis-api';
 import { AnalysisControls } from './analysis-controls';
 import { GameplanTab } from './gameplan';
@@ -39,7 +37,15 @@ type MatchupTab = 'opponent-leads' | 'lead-pick' | 'gameplan';
 
 @Component({
   selector: 'app-matchup',
-  imports: [RouterLink, TeamStrip, OpponentLeads, LeadPick, GameplanTab, AnalysisControls],
+  imports: [
+    RouterLink,
+    TeamStrip,
+    OpponentLeads,
+    LeadPick,
+    GameplanTab,
+    AnalysisControls,
+    TranslocoPipe,
+  ],
   templateUrl: './matchup.html',
 })
 export class Matchup {
@@ -49,6 +55,7 @@ export class Matchup {
 
   readonly store = inject(CoachStore);
   private readonly analysisApi = inject(AnalysisApi);
+  private readonly transloco = inject(TranslocoService);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly capabilities = signal<AnalysisCapabilitiesView | null>(null);
@@ -314,7 +321,7 @@ export class Matchup {
       completedPhases,
       resultRevision,
       targetPhase,
-      phaseLabel: phaseProgressLabel,
+      phaseLabel: (phase) => this.transloco.translate(`phases.${phase}`),
     });
   }
 
@@ -334,21 +341,21 @@ export class Matchup {
     return progress;
   }
 
-  latestRunMessage(): string | null {
+  runStatusMessage(): RunStatusI18n | null {
     const detail = this.store.matchupDetail();
     if (!detail) {
       return null;
     }
     const run = this.selectedRunSummary();
     if (this.runIdMismatch()) {
-      return 'Run introuvable pour ce matchup.';
+      return { key: 'runStatus.runMissing' };
     }
     const view = this.selectedRunView();
     if (view?.kind === 'incompatible') {
-      return view.message;
+      return null;
     }
     if (!run) {
-      return 'Matchup enregistré — aucune analyse disponible';
+      return { key: 'runStatus.none' };
     }
     return activeRunStatusMessage(run);
   }
@@ -366,17 +373,6 @@ export class Matchup {
       return view.message;
     }
     return null;
-  }
-
-  provenanceLabel(): string | null {
-    const view = this.selectedRunView();
-    if (view?.kind === 'mock') {
-      return runProvenanceBadge(view.result.summary.source, null);
-    }
-    if (view?.kind === 'simulation') {
-      return runProvenanceBadge(view.view.summary.source, view.view.provenance);
-    }
-    return runProvenanceBadge(this.runResult()?.summary.source ?? null, null);
   }
 
   refresh(): void {

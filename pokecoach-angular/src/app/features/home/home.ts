@@ -1,5 +1,6 @@
 import { Component, inject, isDevMode, OnInit, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { finalize } from 'rxjs/operators';
 import { CoachStore } from '../../core/data/coach-store';
 import { userMessageForGraphqlError } from '../../core/graphql/graphql-error';
@@ -9,7 +10,7 @@ import type { TeamImportSubmit } from '../../shared/teams/team-import-dialog';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, TeamStrip, TeamImportDialog],
+  imports: [RouterLink, TeamStrip, TeamImportDialog, TranslocoPipe],
   templateUrl: './home.html',
 })
 export class Home implements OnInit {

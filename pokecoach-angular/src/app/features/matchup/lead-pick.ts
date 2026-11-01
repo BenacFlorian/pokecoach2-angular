@@ -1,6 +1,7 @@
-import { Component, input } from '@angular/core';
+import { Component, inject, input } from '@angular/core';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { LeadRecommendation, SelectionResult } from '../../core/models/matchup.model';
-import type { RefinementSectionV2 } from '../../core/models/simulation-result.model';
+import type { RefinementScenarioCountV2, RefinementSectionV2 } from '../../core/models/simulation-result.model';
 import type { PokemonSlot, Team } from '../../core/models/team.model';
 import type { OpeningStudyDisplay } from '../../core/matchup/simulation-display';
 import {
@@ -17,10 +18,12 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
 
 @Component({
   selector: 'app-lead-pick',
-  imports: [PokemonPortrait],
+  imports: [PokemonPortrait, TranslocoPipe],
   templateUrl: './lead-pick.html',
 })
 export class LeadPick {
+  private readonly transloco = inject(TranslocoService);
+
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
   readonly opponentLeads = input<readonly import('../../core/models/matchup.model').OpponentLeadStats[] | null>(null);
@@ -28,7 +31,6 @@ export class LeadPick {
   readonly selections = input<readonly SelectionResult[] | null>(null);
   readonly openings = input<readonly OpeningStudyDisplay[] | null>(null);
   readonly openingsPending = input(false);
-  readonly provenanceNote = input<string | null>(null);
   readonly refinement = input<RefinementSectionV2 | null>(null);
 
   private orderFourLeadsFirst(
@@ -48,11 +50,26 @@ export class LeadPick {
     return this.orderFourLeadsFirst(rec.ourFourSlots, rec.ourLeadSlots);
   }
 
-  displayRefinementFour(ref: RefinementSectionV2): readonly PokemonSlot[] {
-    return this.orderFourLeadsFirst(
-      ref.configuration.ourFourSlots,
-      ref.configuration.ourLeadSlots,
-    );
+  refinementSummaryLabel(ref: RefinementSectionV2): string {
+    const { wins, losses, draws } = ref.outcomes;
+    return this.transloco.translate('leadPick.refinementGlobalOutcomes', {
+      sample: ref.sampleSize,
+      wins,
+      losses,
+      draws,
+    });
+  }
+
+  refinementWinRate(ref: RefinementSectionV2): string {
+    return formatPercent(ref.outcomes.wins, ref.sampleSize);
+  }
+
+  scenarioCountLabel(row: RefinementScenarioCountV2, sampleSize: number): string {
+    return this.transloco.translate('leadPick.refinementScenarioCount', {
+      count: row.count,
+      sample: sampleSize,
+      percent: formatPercent(row.count, sampleSize),
+    });
   }
 
   winRate(result: SelectionResult): string | null {
@@ -60,11 +77,6 @@ export class LeadPick {
       return null;
     }
     return formatPercent(result.wins, result.sampleSize);
-  }
-
-  refinementOutcomeLabel(ref: RefinementSectionV2): string {
-    const { wins, losses, draws } = ref.outcomes;
-    return `${wins} V / ${losses} D / ${draws} N (${ref.sampleSize} combats)`;
   }
 
   leadLabelForStudy(study: OpeningStudyDisplay): string {
@@ -84,7 +96,10 @@ export class LeadPick {
     const oppNames = study.opponentLeadSlots
       .map((s) => opp.pokemon[s]?.species ?? `slot ${s}`)
       .join(', ');
-    return `Notre lead ${ourNames} contre ${oppNames}`;
+    return this.transloco.translate('leadPick.leadMatchupAria', {
+      ours: ourNames,
+      opp: oppNames,
+    });
   }
 
   leadLabel(leadId: string): string {

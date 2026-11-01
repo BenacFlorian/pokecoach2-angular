@@ -1,18 +1,21 @@
 import { Component, inject, input, signal } from '@angular/core';
 import { AsyncPipe, NgTemplateOutlet } from '@angular/common';
+import { TranslocoPipe } from '@jsverse/transloco';
 import type { PokemonSet } from '../../core/models/team.model';
 import { PokemonImages } from '../../core/pokemon/pokemon-images';
+import { PokemonItemImages } from '../../core/pokemon/pokemon-item-images';
 import { PokemonNatureLabels } from '../../core/pokemon/pokemon-natures';
 
 export type DetailPopoverAlign = 'start' | 'end';
 
 @Component({
   selector: 'app-pokemon-portrait',
-  imports: [AsyncPipe, NgTemplateOutlet],
+  imports: [AsyncPipe, NgTemplateOutlet, TranslocoPipe],
   templateUrl: './pokemon-portrait.html',
 })
 export class PokemonPortrait {
   private readonly images = inject(PokemonImages);
+  private readonly itemImages = inject(PokemonItemImages);
   private readonly natureLabels = inject(PokemonNatureLabels);
 
   readonly pokemon = input.required<PokemonSet>();
@@ -23,6 +26,10 @@ export class PokemonPortrait {
 
   imageFor(species: string) {
     return this.images.getImage(species);
+  }
+
+  itemImageFor(item: string | null | undefined) {
+    return this.itemImages.getImage(item);
   }
 
   onImageError(): void {

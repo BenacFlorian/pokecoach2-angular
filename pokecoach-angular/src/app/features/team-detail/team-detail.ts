@@ -1,5 +1,6 @@
 import { Component, effect, inject, input, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { CoachStore } from '../../core/data/coach-store';
 import { activeRunStatusMessage } from '../../core/graphql/coach-mappers';
 import { MatchupPreparation } from '../../core/matchup/matchup-preparation';
@@ -10,7 +11,7 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
 
 @Component({
   selector: 'app-team-detail',
-  imports: [RouterLink, TeamStrip, TeamImportDialog, PokemonPortrait],
+  imports: [RouterLink, TeamStrip, TeamImportDialog, PokemonPortrait, TranslocoPipe],
   templateUrl: './team-detail.html',
 })
 export class TeamDetail {
@@ -18,6 +19,7 @@ export class TeamDetail {
 
   readonly store = inject(CoachStore);
   readonly preparation = inject(MatchupPreparation);
+  private readonly transloco = inject(TranslocoService);
 
   readonly importDialog = viewChild.required(TeamImportDialog);
 
@@ -70,8 +72,8 @@ export class TeamDetail {
     }
     const runMsg = activeRunStatusMessage(summary.latestRun);
     if (runMsg) {
-      return runMsg;
+      return this.transloco.translate(runMsg.key, runMsg.params);
     }
-    return 'Matchup enregistré — aucune analyse disponible';
+    return this.transloco.translate('runStatus.none');
   }
 }

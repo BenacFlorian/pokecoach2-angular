@@ -1,4 +1,4 @@
-<div class="tw:flex tw:flex-col tw:gap-2 tw:border tw:border-base-300 tw:rounded-box tw:p-3">
+<div class="tw:flex tw:flex-col tw:gap-2 tw:border tw:border-base-300 tw:rounded-box tw:p-3 tw:mt-1">
   <div class="tw:flex tw:flex-wrap tw:items-center tw:gap-3">
     <button
       type="button"
@@ -7,21 +7,11 @@
       (click)="launch()"
     >
       @if (busy()) {
-        Lancement…
+        {{ 'analysis.launching' | transloco }}
       } @else {
-        Analyser ce matchup
+        {{ 'analysis.analyze' | transloco }}
       }
     </button>
-    @if (canContinue()) {
-      <button
-        type="button"
-        class="tw:btn tw:btn-outline tw:btn-sm"
-        [disabled]="busy()"
-        (click)="continueRun()"
-      >
-        Continuer l’analyse
-      </button>
-    }
     @if (canCancel()) {
       <button
         type="button"
@@ -29,10 +19,25 @@
         [disabled]="busy()"
         (click)="cancelRun()"
       >
-        Annuler
+        {{ 'common.cancel' | transloco }}
       </button>
     }
+    @if (busy()) {
+      <span class="tw:loading tw:loading-spinner tw:loading-sm" aria-hidden="true"></span>
+    } @else if (progressBar(); as bar) {
+      <progress
+        class="tw:progress tw:progress-primary tw:w-40 tw:max-w-full"
+        role="progressbar"
+        [value]="bar.completed"
+        [max]="bar.total"
+        [attr.aria-valuenow]="bar.completed"
+        [attr.aria-valuemax]="bar.total"
+      ></progress>
+    }
   </div>
+  @if (progressHint(); as hint) {
+    <p class="tw:text-xs tw:text-base-content/60 tw:m-0" role="status">{{ hint }}</p>
+  }
   <p class="tw:text-sm tw:text-base-content/70 tw:m-0">{{ helperText() }}</p>
   @if (error(); as err) {
     <p class="tw:text-sm tw:text-error tw:m-0" role="alert">{{ err }}</p>

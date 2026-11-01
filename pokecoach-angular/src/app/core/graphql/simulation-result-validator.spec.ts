@@ -41,6 +41,21 @@ describe('simulation-result-validator', () => {
     expect(outcome.ok).toBe(false);
   });
 
+  it('rejects legacy refinement without weighted-ab metadata', () => {
+    const payload = JSON.parse(readFileSync(join(EXAMPLES_DIR, 'acbd.json'), 'utf-8'));
+    payload.refinement = {
+      configuration: payload.refinement.configuration,
+      sampleSize: 2,
+      outcomes: { wins: 2, losses: 0, draws: 0 },
+      firstTurnSampleSize: 0,
+      firstTurns: [],
+      battleIds: ['a', 'b'],
+      limitations: [],
+    };
+    const outcome = validateSimulationResult(payload);
+    expect(outcome.ok).toBe(false);
+  });
+
   it('rejects unknown format source', () => {
     const outcome = validateSimulationResult({
       schemaVersion: 2,

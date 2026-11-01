@@ -1,28 +1,40 @@
 @let mon = pokemon();
 @let img = imageFor(mon.species) | async;
+@let itemImg = itemImageFor(mon.item) | async;
 @let summaryId = detailSummaryId(mon);
 
 <ng-template #portraitFigure>
   <figure class="tw:flex tw:flex-col tw:items-center tw:gap-1 tw:min-w-[4.5rem]">
     <div
-      class="tw:w-14 tw:h-14 tw:rounded-box tw:bg-base-200 tw:flex tw:items-center tw:justify-center tw:overflow-hidden"
+      class="tw:relative tw:w-14 tw:h-14 tw:rounded-box tw:bg-base-200 tw:flex tw:items-center tw:justify-center tw:overflow-visible"
     >
-      @if (img && !imageFailed()) {
+      <div class="tw:w-full tw:h-full tw:overflow-hidden tw:rounded-box">
+        @if (img && !imageFailed()) {
+          <img
+            [src]="img.url"
+            [alt]="mon.species"
+            width="56"
+            height="56"
+            class="tw:object-contain tw:w-full tw:h-full"
+            (error)="onImageError()"
+          />
+        } @else {
+          <img
+            src="/images/pokemon-placeholder.svg"
+            [alt]="mon.species"
+            width="56"
+            height="56"
+            class="tw:object-contain tw:w-full tw:h-full"
+          />
+        }
+      </div>
+      @if (itemImg) {
         <img
-          [src]="img.url"
-          [alt]="mon.species"
-          width="56"
-          height="56"
-          class="tw:object-contain tw:w-full tw:h-full"
-          (error)="onImageError()"
-        />
-      } @else {
-        <img
-          src="/images/pokemon-placeholder.svg"
-          [alt]="mon.species"
-          width="56"
-          height="56"
-          class="tw:object-contain tw:w-full tw:h-full"
+          [src]="itemImg.url"
+          [alt]="itemImg.alt"
+          width="22"
+          height="22"
+          class="tw:absolute tw:-bottom-1 tw:-right-1 tw:w-[1.35rem] tw:h-[1.35rem] tw:object-contain tw:rounded-sm tw:bg-base-100 tw:border tw:border-base-300 tw:shadow-sm tw:z-10"
         />
       }
     </div>
@@ -52,25 +64,25 @@
     >
       <p class="tw:font-semibold tw:m-0">{{ displayName(mon) }}</p>
       @if (mon.ability) {
-        <p class="tw:m-0 tw:mt-2">
-          <span class="tw:text-base-content/70" i18n="@@pokemonDetail.ability">Talent</span>
-          {{ mon.ability }}
+        <p class="tw:m-0 tw:mt-2 tw:flex tw:justify-between tw:gap-4">
+          <span class="tw:text-base-content/70">{{ 'pokemonDetail.ability' | transloco }}</span>
+          <span class="tw:text-right">{{ mon.ability }}</span>
         </p>
       }
       @if (mon.item) {
-        <p class="tw:m-0 tw:mt-1">
-          <span class="tw:text-base-content/70" i18n="@@pokemonDetail.item">Objet</span>
-          {{ mon.item }}
+        <p class="tw:m-0 tw:mt-1 tw:flex tw:justify-between tw:gap-4">
+          <span class="tw:text-base-content/70">{{ 'pokemonDetail.item' | transloco }}</span>
+          <span class="tw:text-right">{{ mon.item }}</span>
         </p>
       }
       @if (mon.nature) {
-        <p class="tw:m-0 tw:mt-1">
-          <span class="tw:text-base-content/70" i18n="@@pokemonDetail.nature">Nature</span>
-          {{ natureDisplay(mon) }}
+        <p class="tw:m-0 tw:mt-1 tw:flex tw:justify-between tw:gap-4">
+          <span class="tw:text-base-content/70">{{ 'pokemonDetail.nature' | transloco }}</span>
+          <span class="tw:text-right">{{ natureDisplay(mon) }}</span>
         </p>
       }
       @if (mon.moves.length) {
-        <p class="tw:text-base-content/70 tw:m-0 tw:mt-2" i18n="@@pokemonDetail.moves">Capacités</p>
+        <p class="tw:text-base-content/70 tw:m-0 tw:mt-2">{{ 'pokemonDetail.moves' | transloco }}</p>
         <ul class="tw:list-disc tw:pl-4 tw:m-0">
           @for (move of mon.moves; track move) {
             <li>{{ move }}</li>
@@ -78,9 +90,7 @@
         </ul>
       }
       @if (!mon.ability && !mon.item && !mon.nature && !mon.moves.length) {
-        <p class="tw:m-0 tw:mt-2 tw:text-base-content/70" i18n="@@pokemonDetail.empty">
-          Aucun détail Showdown enregistré pour ce Pokémon.
-        </p>
+        <p class="tw:m-0 tw:mt-2 tw:text-base-content/70">{{ 'pokemonDetail.empty' | transloco }}</p>
       }
     </div>
   </div>

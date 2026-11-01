@@ -1,7 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { TranslocoPipe } from '@jsverse/transloco';
 import { filter, map, startWith } from 'rxjs';
+import { LocaleService } from '../../core/i18n/locale.service';
 
 function teamIdFromMatchupUrl(url: string): string | null {
   const path = url.split('?')[0] ?? url;
@@ -11,11 +13,12 @@ function teamIdFromMatchupUrl(url: string): string | null {
 
 @Component({
   selector: 'app-navbar',
-  imports: [RouterLink],
+  imports: [RouterLink, TranslocoPipe],
   templateUrl: './navbar.html',
 })
 export class Navbar {
   private readonly router = inject(Router);
+  readonly locale = inject(LocaleService);
 
   readonly teamBackId = toSignal(
     this.router.events.pipe(
@@ -25,4 +28,8 @@ export class Navbar {
     ),
     { initialValue: teamIdFromMatchupUrl(this.router.url) },
   );
+
+  toggleLocale(): void {
+    this.locale.toggle();
+  }
 }

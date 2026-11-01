@@ -52,10 +52,21 @@ export interface OpeningStudyEntryV2 {
   endStateNotes: string[];
 }
 
+export interface RefinementScenarioCountV2 {
+  opponentLeadId: string;
+  opponentLeadSlots: [number, number];
+  opponentBackPair: [number, number];
+  count: number;
+}
+
 export interface RefinementSectionV2 {
   configuration: LeadSelectionV2;
+  samplingPolicy: 'weighted-ab';
+  samplingScope: 'all-observed-leads';
   sampleSize: number;
-  outcomes: Record<string, number>;
+  outcomes: { wins: number; losses: number; draws: number };
+  scenarioCounts: readonly RefinementScenarioCountV2[];
+  firstTurnSampleSize: number;
   firstTurns: unknown[];
   battleIds: string[];
   limitations: string[];

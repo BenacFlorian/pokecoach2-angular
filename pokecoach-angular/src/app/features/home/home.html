@@ -1,19 +1,18 @@
 <div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
   <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-    <h1 class="tw:m-0" i18n="@@home.title">Nos équipes</h1>
+    <h1 class="tw:m-0">{{ 'home.title' | transloco }}</h1>
     <div class="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
       @if (showDevLinks) {
         <a routerLink="/developer/demo-data" class="tw:btn tw:btn-ghost tw:btn-sm">Demo seed</a>
       }
       <button
-      type="button"
-      class="tw:btn tw:btn-soft tw:btn-primary"
-      #addBtn
-      [disabled]="savingTeam"
-      (click)="openImport(addBtn)"
-      i18n="@@home.addTeam"
+        type="button"
+        class="tw:btn tw:btn-soft tw:btn-primary"
+        #addBtn
+        [disabled]="savingTeam"
+        (click)="openImport(addBtn)"
       >
-        Ajouter une équipe
+        {{ 'home.addTeam' | transloco }}
       </button>
     </div>
   </div>
@@ -30,10 +29,12 @@
     } @else if (store.teamsState() === 'error') {
       <div class="tw:alert tw:alert-error" role="alert">
         <p class="tw:m-0">{{ store.teamsError() }}</p>
-        <button type="button" class="tw:btn tw:btn-sm" (click)="retryTeams()">Réessayer</button>
+        <button type="button" class="tw:btn tw:btn-sm" (click)="retryTeams()">
+          {{ 'common.retry' | transloco }}
+        </button>
       </div>
     } @else if (store.teamsState() === 'ready' && store.teams().length === 0) {
-      <p i18n="@@home.empty">Aucune équipe enregistrée. Ajoutez la vôtre pour commencer.</p>
+      <p>{{ 'home.empty' | transloco }}</p>
     }
     @for (team of store.teams(); track team.id) {
       <a
@@ -42,13 +43,9 @@
       >
         <app-team-strip [team]="team" />
         @if (team.source.url) {
-          <span class="tw:text-sm tw:text-base-content/70" i18n="@@home.pokepasteLink"
-            >Voir le Poképaste</span
-          >
+          <span class="tw:text-sm tw:text-base-content/70">{{ 'home.pokepasteLink' | transloco }}</span>
         } @else {
-          <span class="tw:text-sm tw:text-base-content/70" i18n="@@home.localSource"
-            >Source Showdown locale</span
-          >
+          <span class="tw:text-sm tw:text-base-content/70">{{ 'home.localSource' | transloco }}</span>
         }
       </a>
     }
@@ -59,7 +56,7 @@
         [disabled]="store.teamsLoadingMore()"
         (click)="store.loadMoreTeams()"
       >
-        Charger la suite
+        {{ 'home.loadMore' | transloco }}
       </button>
     }
   </div>

@@ -1,18 +1,23 @@
 <header class="tw:navbar tw:bg-base-100 tw:border-b tw:border-base-300 tw:shrink-0">
   <div class="tw:navbar-start tw:gap-0">
-    <a
-      routerLink="/"
-      class="tw:btn tw:btn-ghost tw:text-lg tw:font-semibold"
-      i18n="@@app.brand"
-      >pokecoach</a
-    >
+    <a routerLink="/" class="tw:btn tw:btn-ghost tw:text-lg tw:font-semibold">{{
+      'nav.brand' | transloco
+    }}</a>
     @if (teamBackId(); as teamId) {
-      <a
-        [routerLink]="['/teams', teamId]"
-        class="tw:btn tw:btn-ghost tw:btn-sm tw:font-normal"
-        i18n="@@matchup.backTeamLink"
-        >← Notre équipe</a
-      >
+      <a [routerLink]="['/teams', teamId]" class="tw:btn tw:btn-ghost tw:btn-sm tw:font-normal">{{
+        'nav.backTeam' | transloco
+      }}</a>
     }
+  </div>
+  <div class="tw:navbar-end">
+    <button
+      type="button"
+      class="tw:btn tw:btn-ghost tw:btn-sm tw:gap-2"
+      [attr.aria-label]="'nav.langToggleAria' | transloco"
+      (click)="toggleLocale()"
+    >
+      <span aria-hidden="true">{{ locale.flagEmoji() }}</span>
+      <span>{{ locale.shortLabel() }}</span>
+    </button>
   </div>
 </header>

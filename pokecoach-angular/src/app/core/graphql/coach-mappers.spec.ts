@@ -259,8 +259,7 @@ describe('run status helpers', () => {
       targetPhase: 'A',
       progress: null,
     });
-    expect(msg).toContain('pause');
-    expect(msg).toContain('A');
+    expect(msg).toEqual({ key: 'runStatus.paused', params: { phase: 'A' } });
   });
 
   it('labels simulation provenance', () => {
