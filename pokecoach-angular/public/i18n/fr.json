@@ -105,6 +105,24 @@
     "moves": "Capacités",
     "empty": "Aucun détail Showdown enregistré pour ce Pokémon."
   },
+  "moveTargets": {
+    "selfActor": "lanceur",
+    "unknownScope": "portée non déterminée",
+    "unknownTarget": "cible non déterminée",
+    "zone": {
+      "allySide": "camp du lanceur",
+      "foeSide": "camp adverse",
+      "allAdjacent": "tous les Pokémon adjacents, alliés compris",
+      "allAdjacentFoes": "tous les adversaires adjacents",
+      "allies": "tous les Pokémon actifs du camp du lanceur",
+      "allyTeam": "équipe du lanceur",
+      "all": "terrain / ensemble du combat",
+      "randomNormal": "adversaire adjacent choisi aléatoirement",
+      "scripted": "cible déterminée par la mécanique de la capacité",
+      "field": "terrain",
+      "all-opponents": "tous les adversaires"
+    }
+  },
   "phases": {
     "A": "Observation des leads adverses",
     "C": "Sélection de notre bring",

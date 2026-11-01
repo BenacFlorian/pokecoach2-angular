@@ -1,53 +1,140 @@
 import type { ActionTarget, BattleAction, PokemonRef, Side } from '../models/matchup.model';
 import type { Team } from '../models/team.model';
 
+const INDIVIDUAL_TARGETS = new Set([
+  'normal',
+  'adjacentFoe',
+  'adjacentAlly',
+  'adjacentAllyOrSelf',
+  'any',
+]);
+
+export interface MoveTargetLabels {
+  zoneLabel: (zone: string) => string;
+  selfActor: () => string;
+  unknownScope: () => string;
+  unknownTarget: () => string;
+}
+
+export const DEFAULT_MOVE_TARGET_LABELS: MoveTargetLabels = {
+  zoneLabel: (zone) => {
+    switch (zone) {
+      case 'allySide':
+        return 'camp du lanceur';
+      case 'foeSide':
+        return 'camp adverse';
+      case 'allAdjacent':
+        return 'tous les Pokémon adjacents, alliés compris';
+      case 'allAdjacentFoes':
+        return 'tous les adversaires adjacents';
+      case 'allies':
+        return 'tous les Pokémon actifs du camp du lanceur';
+      case 'allyTeam':
+        return 'équipe du lanceur';
+      case 'all':
+        return 'terrain / ensemble du combat';
+      case 'randomNormal':
+        return 'adversaire adjacent choisi aléatoirement';
+      case 'scripted':
+        return 'cible déterminée par la mécanique de la capacité';
+      case 'field':
+        return 'terrain';
+      case 'all-opponents':
+        return 'tous les adversaires';
+      default:
+        return zone;
+    }
+  },
+  selfActor: () => 'lanceur',
+  unknownScope: () => 'portée non déterminée',
+  unknownTarget: () => 'cible non déterminée',
+};
+
 function teamForSide(side: Side, ourTeam: Team, opponentTeam: Team): Team {
   return side === 'ours' ? ourTeam : opponentTeam;
+}
+
+function formatPokemonRef(
+  ref: PokemonRef,
+  ourTeam: Team,
+  opponentTeam: Team,
+  labels: MoveTargetLabels,
+): string {
+  const team = teamForSide(ref.side, ourTeam, opponentTeam);
+  return team.pokemon[ref.slot]?.species ?? labels.unknownTarget();
+}
+
+function scopeSuffix(
+  action: Extract<BattleAction, { kind: 'move' }>,
+  labels: MoveTargetLabels,
+): string | null {
+  if (action.targetType === 'self') {
+    return `(${labels.selfActor()})`;
+  }
+  if (action.targetType && !INDIVIDUAL_TARGETS.has(action.targetType)) {
+    return `(${labels.zoneLabel(action.targetType)})`;
+  }
+  if (action.targets.length === 1 && action.targets[0].kind === 'zone') {
+    const zone = action.targets[0].zone;
+    if (zone === 'self') {
+      return `(${labels.selfActor()})`;
+    }
+    if (zone === 'field' || zone === 'all-opponents' || !INDIVIDUAL_TARGETS.has(zone)) {
+      return `(${labels.zoneLabel(zone)})`;
+    }
+  }
+  if (action.targetType === null && action.targetSource === 'unknown') {
+    return `(${labels.unknownScope()})`;
+  }
+  return null;
+}
+
+function formatMoveTargets(
+  action: Extract<BattleAction, { kind: 'move' }>,
+  ourTeam: Team,
+  opponentTeam: Team,
+  labels: MoveTargetLabels,
+): string {
+  const scope = scopeSuffix(action, labels);
+  if (scope !== null) {
+    return scope;
+  }
+  if (action.targets.length === 0) {
+    return labels.unknownTarget();
+  }
+  return action.targets
+    .map((target) => formatTarget(target, ourTeam, opponentTeam, labels))
+    .join(', ');
 }
 
 function formatTarget(
   target: ActionTarget,
   ourTeam: Team,
   opponentTeam: Team,
+  labels: MoveTargetLabels,
 ): string {
   if (target.kind === 'zone') {
-    switch (target.zone) {
-      case 'field':
-        return 'terrain';
-      case 'all-opponents':
-        return 'tous les adversaires';
-      case 'self':
-        return 'soi-même';
-      default:
-        return target.zone;
+    if (target.zone === 'self') {
+      return labels.selfActor();
     }
+    return labels.zoneLabel(target.zone);
   }
-  const team = teamForSide(target.ref.side, ourTeam, opponentTeam);
-  return team.pokemon[target.ref.slot]?.species ?? `slot ${target.ref.slot}`;
+  return formatPokemonRef(target.ref, ourTeam, opponentTeam, labels);
 }
 
-/** Omit arrow target clause when the move only affects the field or all foes. */
-function formatMoveTargets(
-  move: string,
-  targets: ActionTarget[],
-  ourTeam: Team,
-  opponentTeam: Team,
-): string {
-  if (
-    targets.length === 1 &&
-    targets[0].kind === 'zone' &&
-    (targets[0].zone === 'field' || targets[0].zone === 'all-opponents')
-  ) {
-    return formatTarget(targets[0], ourTeam, opponentTeam);
-  }
-  return targets.map((t) => formatTarget(t, ourTeam, opponentTeam)).join(', ');
+function usesArrowSyntax(
+  action: Extract<BattleAction, { kind: 'move' }>,
+  labels: MoveTargetLabels,
+): boolean {
+  return scopeSuffix(action, labels) === null;
 }
 
-/** Format one battle action with correct actor/target sides (plan 05). */
+/** Format one battle action with correct actor/target sides (plan 05 + plan 12). */
 export function formatBattleAction(
   action: BattleAction,
   ourTeam: Team,
   opponentTeam: Team,
+  labels: MoveTargetLabels = DEFAULT_MOVE_TARGET_LABELS,
 ): string {
   if (action.kind === 'switch') {
     const actorTeam = teamForSide(action.actor.side, ourTeam, opponentTeam);
@@ -58,14 +145,10 @@ export function formatBattleAction(
   }
   const actorTeam = teamForSide(action.actor.side, ourTeam, opponentTeam);
   const actor = actorTeam.pokemon[action.actor.slot]?.species ?? '?';
-  const targets = formatMoveTargets(action.move, action.targets, ourTeam, opponentTeam);
+  const targets = formatMoveTargets(action, ourTeam, opponentTeam, labels);
   const tera = action.terastallize ? ` (Tera ${action.terastallize})` : '';
-  if (
-    action.targets.length === 1 &&
-    action.targets[0].kind === 'zone' &&
-    (action.targets[0].zone === 'field' || action.targets[0].zone === 'all-opponents')
-  ) {
-    return `${actor} : ${action.move} (${targets})${tera}`;
+  if (!usesArrowSyntax(action, labels)) {
+    return `${actor} : ${action.move} ${targets}${tera}`;
   }
   return `${actor} : ${action.move} → ${targets}${tera}`;
 }
@@ -74,8 +157,9 @@ export function formatActionPair(
   pair: readonly [BattleAction, BattleAction],
   ourTeam: Team,
   opponentTeam: Team,
+  labels: MoveTargetLabels = DEFAULT_MOVE_TARGET_LABELS,
 ): string {
-  return `${formatBattleAction(pair[0], ourTeam, opponentTeam)} · ${formatBattleAction(pair[1], ourTeam, opponentTeam)}`;
+  return `${formatBattleAction(pair[0], ourTeam, opponentTeam, labels)} · ${formatBattleAction(pair[1], ourTeam, opponentTeam, labels)}`;
 }
 
 export function isBattleAction(raw: unknown): raw is BattleAction {
@@ -90,8 +174,23 @@ export function isBattleAction(raw: unknown): raw is BattleAction {
     return (
       isPokemonRef(obj['actor']) &&
       typeof obj['move'] === 'string' &&
-      Array.isArray(obj['targets'])
+      Array.isArray(obj['targets']) &&
+      obj['targets'].every(isActionTarget)
     );
+  }
+  return false;
+}
+
+function isActionTarget(raw: unknown): raw is ActionTarget {
+  if (typeof raw !== 'object' || raw === null) {
+    return false;
+  }
+  const obj = raw as Record<string, unknown>;
+  if (obj['kind'] === 'pokemon') {
+    return isPokemonRef(obj['ref']);
+  }
+  if (obj['kind'] === 'zone') {
+    return typeof obj['zone'] === 'string';
   }
   return false;
 }
@@ -146,4 +245,15 @@ export function formatFrequencyLabel(f: ActionPairFrequencyDisplay): string {
   const pct =
     f.sampleSize > 0 ? Math.round((f.count / f.sampleSize) * 1000) / 10 : 0;
   return `${f.count}/${f.sampleSize} (${pct} %)`;
+}
+
+export function createMoveTargetLabels(
+  translate: (key: string) => string,
+): MoveTargetLabels {
+  return {
+    zoneLabel: (zone) => translate(`moveTargets.zone.${zone}`),
+    selfActor: () => translate('moveTargets.selfActor'),
+    unknownScope: () => translate('moveTargets.unknownScope'),
+    unknownTarget: () => translate('moveTargets.unknownTarget'),
+  };
 }

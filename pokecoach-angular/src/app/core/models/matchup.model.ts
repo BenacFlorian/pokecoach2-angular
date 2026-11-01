@@ -7,9 +7,31 @@ export interface PokemonRef {
   slot: PokemonSlot;
 }
 
+export type ShowdownMoveTarget =
+  | 'normal'
+  | 'adjacentFoe'
+  | 'adjacentAlly'
+  | 'adjacentAllyOrSelf'
+  | 'any'
+  | 'self'
+  | 'allAdjacent'
+  | 'allAdjacentFoes'
+  | 'allies'
+  | 'allySide'
+  | 'allyTeam'
+  | 'foeSide'
+  | 'all'
+  | 'randomNormal'
+  | 'scripted';
+
+/** Legacy zones from analyses before plan 12. */
+export type LegacyActionZone = 'field' | 'all-opponents' | 'self';
+
 export type ActionTarget =
   | { kind: 'pokemon'; ref: PokemonRef }
-  | { kind: 'zone'; zone: 'self' | 'all-opponents' | 'field' };
+  | { kind: 'zone'; zone: ShowdownMoveTarget | LegacyActionZone };
+
+export type TargetSource = 'request' | 'dex' | 'unknown';
 
 export type BattleAction =
   | {
@@ -17,6 +39,9 @@ export type BattleAction =
       actor: PokemonRef;
       move: string;
       targets: ActionTarget[];
+      moveId?: string | null;
+      targetType?: ShowdownMoveTarget | null;
+      targetSource?: TargetSource | null;
       terastallize?: string;
     }
   | { kind: 'switch'; actor: PokemonRef; switchTo: PokemonRef };

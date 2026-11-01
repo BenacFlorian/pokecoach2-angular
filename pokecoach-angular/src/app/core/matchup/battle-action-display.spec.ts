@@ -33,7 +33,21 @@ describe('formatBattleAction', () => {
     expect(formatBattleAction(action, ours, opp)).toContain(ours.pokemon[0]!.species);
   });
 
-  it('formats field moves without a fake pokemon target', () => {
+  it('formats allySide moves without a fake pokemon target', () => {
+    const action: BattleAction = {
+      kind: 'move',
+      actor: { side: 'ours', slot: 0 },
+      move: 'Tailwind',
+      targetType: 'allySide',
+      targetSource: 'dex',
+      targets: [{ kind: 'zone', zone: 'allySide' }],
+    };
+    expect(formatBattleAction(action, ours, opp)).toBe(
+      'Excadrill : Tailwind (camp du lanceur)',
+    );
+  });
+
+  it('formats legacy field zone as terrain', () => {
     const action: BattleAction = {
       kind: 'move',
       actor: { side: 'ours', slot: 0 },

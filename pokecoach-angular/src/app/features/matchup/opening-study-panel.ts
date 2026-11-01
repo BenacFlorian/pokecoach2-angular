@@ -1,8 +1,9 @@
-import { Component, computed, input } from '@angular/core';
-import { TranslocoPipe } from '@jsverse/transloco';
+import { Component, computed, inject, input } from '@angular/core';
+import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { OpponentLeadStats } from '../../core/models/matchup.model';
 import type { Team } from '../../core/models/team.model';
 import {
+  createMoveTargetLabels,
   formatActionPair,
   formatFrequencyLabel,
 } from '../../core/matchup/battle-action-display';
@@ -16,6 +17,11 @@ import { PokemonPortrait } from '../../shared/pokemon/pokemon-portrait';
   templateUrl: './opening-study-panel.html',
 })
 export class OpeningStudyPanel {
+  private readonly transloco = inject(TranslocoService);
+  private readonly moveLabels = computed(() =>
+    createMoveTargetLabels((key) => this.transloco.translate(key)),
+  );
+
   readonly ourTeam = input.required<Team>();
   readonly opponentTeam = input.required<Team>();
   readonly lead = input.required<OpponentLeadStats>();
@@ -39,10 +45,20 @@ export class OpeningStudyPanel {
   }
 
   formatOurPair(row: OpeningStudyDisplay['ourActions'][number]): string {
-    return formatActionPair(row.value, this.ourTeam(), this.opponentTeam());
+    return formatActionPair(
+      row.value,
+      this.ourTeam(),
+      this.opponentTeam(),
+      this.moveLabels(),
+    );
   }
 
   formatOppPair(row: OpeningStudyDisplay['opponentActions'][number]): string {
-    return formatActionPair(row.value, this.ourTeam(), this.opponentTeam());
+    return formatActionPair(
+      row.value,
+      this.ourTeam(),
+      this.opponentTeam(),
+      this.moveLabels(),
+    );
   }
 }

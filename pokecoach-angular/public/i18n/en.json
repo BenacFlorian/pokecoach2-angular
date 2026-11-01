@@ -105,6 +105,24 @@
     "moves": "Moves",
     "empty": "No Showdown details stored for this Pokémon."
   },
+  "moveTargets": {
+    "selfActor": "user",
+    "unknownScope": "undetermined scope",
+    "unknownTarget": "undetermined target",
+    "zone": {
+      "allySide": "user's side",
+      "foeSide": "opponent's side",
+      "allAdjacent": "all adjacent Pokémon, allies included",
+      "allAdjacentFoes": "all adjacent foes",
+      "allies": "all active Pokémon on the user's side",
+      "allyTeam": "user's team",
+      "all": "field / entire battle",
+      "randomNormal": "random adjacent foe",
+      "scripted": "target fixed by move mechanics",
+      "field": "field",
+      "all-opponents": "all opponents"
+    }
+  },
   "phases": {
     "A": "Observing opponent leads",
     "C": "Selecting our bring",

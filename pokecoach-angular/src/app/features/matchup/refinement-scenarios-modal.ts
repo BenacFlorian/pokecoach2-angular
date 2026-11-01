@@ -9,6 +9,7 @@ import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import type { RefinementScenarioCountV2, RefinementSectionV2 } from '../../core/models/simulation-result.model';
 import type { Team } from '../../core/models/team.model';
 import {
+  createMoveTargetLabels,
   formatBattleAction,
   formatFrequencyLabel,
 } from '../../core/matchup/battle-action-display';
@@ -85,7 +86,8 @@ export class RefinementScenariosModal {
       import('../../core/models/matchup.model').BattleAction,
       import('../../core/models/matchup.model').BattleAction,
     ];
-    return `${formatBattleAction(pair[0], this.ourTeam(), this.opponentTeam())} ; ${formatBattleAction(pair[1], this.ourTeam(), this.opponentTeam())} (n=${count}/${sample})`;
+    const labels = createMoveTargetLabels((key) => this.transloco.translate(key));
+    return `${formatBattleAction(pair[0], this.ourTeam(), this.opponentTeam(), labels)} ; ${formatBattleAction(pair[1], this.ourTeam(), this.opponentTeam(), labels)} (n=${count}/${sample})`;
   }
 
   freqLabel = formatFrequencyLabel;
