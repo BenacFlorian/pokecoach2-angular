@@ -72,7 +72,7 @@ export function mapSimulationToTabDisplay(
 
   const gameplan =
     hasSynthesis && partial.gameplan && partial.winCondition && teams
-      ? mapGameplan(partial.gameplan, partial.winCondition, partial.leadPick?.limitations ?? [], teams)
+      ? mapGameplan(partial.gameplan, partial.winCondition, teams)
       : null;
 
   return {
@@ -292,7 +292,6 @@ function mapComparisons(raw: unknown[]): readonly SelectionResult[] {
 function mapGameplan(
   section: import('../models/simulation-result.model').GameplanSectionV2,
   win: import('../models/simulation-result.model').WinConditionSectionV2,
-  limitations: string[],
   teams: { ours: Team; opponent: Team },
 ): GameplanReport {
   const threats: GameplanHighlightDisplay[] = mapPokemonHighlights(
@@ -315,6 +314,6 @@ function mapGameplan(
     winCondition: win.description,
     winConditionRationale: win.rationale,
     refinementSequences: [],
-    sampleLimitation: limitations.join(' ') || win.rationale,
+    sampleLimitation: '',
   };
 }

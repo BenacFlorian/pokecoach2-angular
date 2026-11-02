@@ -42,10 +42,6 @@
         <p class="tw:text-sm tw:text-base-content/70 tw:mb-0 tw:mt-2">{{ plan.winConditionRationale }}</p>
       }
     </article>
-
-    @if (plan.sampleLimitation) {
-      <p class="tw:text-sm tw:text-base-content/70 tw:m-0">{{ plan.sampleLimitation }}</p>
-    }
   </div>
 } @else if (generating()) {
   <p class="tw:text-base-content/70 tw:m-0">{{ 'gameplan.generating' | transloco }}</p>
