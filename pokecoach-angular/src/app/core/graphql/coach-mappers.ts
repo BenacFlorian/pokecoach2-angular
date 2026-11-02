@@ -351,6 +351,12 @@ function mapSuccessfulRun(run: GqlRunNode | null | undefined): SuccessfulResultS
   if (!summary || summary.status !== 'succeeded') {
     return { kind: 'incompatible', message: 'Rapport enregistré illisible.' };
   }
+  if (run.source === 'simulation' && run.reportVersion === 2) {
+    const validated = validateSimulationResult(run.partialResult ?? run.report);
+    if (validated.ok) {
+      return { kind: 'absent' };
+    }
+  }
   if (run.reportVersion !== 1 || run.source !== 'mock') {
     return {
       kind: 'incompatible',

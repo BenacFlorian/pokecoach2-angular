@@ -397,16 +397,19 @@ export class Matchup {
   }
 
   incompatibleMessage(): string | null {
+    const view = this.selectedRunView();
+    if (view?.kind === 'incompatible') {
+      return view.message;
+    }
+    if (this.runContentAvailable()) {
+      return null;
+    }
     const detail = this.store.matchupDetail();
     if (!detail) {
       return null;
     }
     if (!this.runId()?.trim() && detail.successfulResult.kind === 'incompatible') {
       return detail.successfulResult.message;
-    }
-    const view = this.selectedRunView();
-    if (view?.kind === 'incompatible') {
-      return view.message;
     }
     return null;
   }
