@@ -1,22 +1,24 @@
 import { Component, inject, isDevMode, OnInit, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
-import { finalize } from 'rxjs/operators';
 import { CoachStore } from '../../core/data/coach-store';
 import { userMessageForGraphqlError } from '../../core/graphql/graphql-error';
 import { TeamImportDialog } from '../../shared/teams/team-import-dialog';
+import { TeamDeleteDialog } from '../../shared/teams/team-delete-dialog';
 import { TeamStrip } from '../../shared/teams/team-strip';
 import type { TeamImportSubmit } from '../../shared/teams/team-import-dialog';
+import type { Team } from '../../core/models/team.model';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, TeamStrip, TeamImportDialog, TranslocoPipe],
+  imports: [RouterLink, TeamStrip, TeamImportDialog, TeamDeleteDialog, TranslocoPipe],
   templateUrl: './home.html',
 })
 export class Home implements OnInit {
   readonly store = inject(CoachStore);
   readonly showDevLinks = isDevMode();
   readonly importDialog = viewChild.required(TeamImportDialog);
+  readonly deleteDialog = viewChild.required(TeamDeleteDialog);
 
   savingTeam = false;
   saveTeamError: string | null = null;
@@ -31,6 +33,12 @@ export class Home implements OnInit {
     this.importDialog().open(trigger);
   }
 
+  openDelete(trigger: HTMLButtonElement, team: Team, event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.deleteDialog().open(team, trigger);
+  }
+
   onTeamImported(payload: TeamImportSubmit): void {
     if (this.savingTeam) {
       return;
@@ -43,35 +51,26 @@ export class Home implements OnInit {
     this.saveTeamError = null;
     this.importDialog().setSaving(true);
 
-    this.store
-      .createOwnedTeam(requestId, payload.name, payload.imported)
-      .pipe(
-        finalize(() => {
-          this.savingTeam = false;
-          this.importDialog().setSaving(false);
-        }),
-      )
-      .subscribe({
-        next: (team) => {
-          this.pendingTeamId = null;
-          this.store.prependTeam(team);
-          this.store.loadTeams();
-          this.importDialog().close();
-        },
-        error: (err) => {
-          this.saveTeamError = userMessageForGraphqlError(err);
-          this.store.reconcileOwnedTeam(requestId).subscribe({
-            next: (existing) => {
-              if (existing) {
-                this.pendingTeamId = null;
-                this.store.prependTeam(existing);
-                this.store.loadTeams();
-                this.importDialog().close();
-              }
-            },
-          });
-        },
-      });
+    this.store.createOwnedTeam(requestId, payload.name, payload.imported).subscribe({
+      next: (team) => this.completeTeamSave(team),
+      error: (err) => {
+        this.saveTeamError = userMessageForGraphqlError(err);
+        this.store.reconcileOwnedTeam(requestId).subscribe({
+          next: (existing) => {
+            if (existing) {
+              this.completeTeamSave(existing);
+            } else {
+              this.releaseTeamSave();
+            }
+          },
+          error: () => this.releaseTeamSave(),
+        });
+      },
+    });
+  }
+
+  onTeamDeleted(_teamId: string): void {
+    this.store.loadTeams();
   }
 
   onImportCancelled(): void {
@@ -82,5 +81,17 @@ export class Home implements OnInit {
 
   retryTeams(): void {
     this.store.loadTeams();
+  }
+
+  private completeTeamSave(team: Team): void {
+    this.pendingTeamId = null;
+    this.store.loadTeams();
+    this.importDialog().close();
+    this.releaseTeamSave();
+  }
+
+  private releaseTeamSave(): void {
+    this.savingTeam = false;
+    this.importDialog().setSaving(false);
   }
 }

@@ -104,6 +104,10 @@ export class TeamImportDialog {
   }
 
   onDialogCancel(event: Event): void {
+    if (this.resolving() || this.saving()) {
+      event.preventDefault();
+      return;
+    }
     event.preventDefault();
     this.cancelled.emit();
     this.close();

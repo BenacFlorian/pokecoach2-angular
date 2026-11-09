@@ -4,6 +4,7 @@ import type { ImportedTeam, Team } from '../models/team.model';
 import type {
   GqlCreateMatchupPayload,
   GqlCreateTeamPayload,
+  GqlDeleteOwnedTeamPayload,
   GqlMatchupById,
   GqlMatchupsConnection,
   GqlRunById,
@@ -13,6 +14,7 @@ import type {
 import {
   CREATE_OPPONENT_MATCHUP,
   CREATE_OWNED_TEAM,
+  DELETE_OWNED_TEAM,
   GET_MATCHUP,
   GET_OWNED_TEAM,
   GET_RUN,
@@ -63,10 +65,16 @@ export class CoachApi {
       .pipe(map((data) => mapTeamNode(data.team, 'owned')));
   }
 
-  listMatchups(teamId: string, after?: string): Observable<Page<MatchupSummary>> {
+  listMatchups(
+    teamId: string,
+    speciesQuery = '',
+    after?: string,
+  ): Observable<Page<MatchupSummary>> {
+    const query = speciesQuery.trim();
     return this.gql
       .execute<GqlMatchupsConnection>('ListMatchups', LIST_MATCHUPS, {
         teamId,
+        speciesQuery: query,
         after: after ?? null,
       })
       .pipe(
@@ -79,7 +87,35 @@ export class CoachApi {
             items,
             endCursor: conn.pageInfo.endCursor,
             hasNextPage: conn.pageInfo.hasNextPage,
+            totalCount: conn.totalCount,
           };
+        }),
+      );
+  }
+
+  deleteOwnedTeam(teamId: string): Observable<string> {
+    return this.gql
+      .execute<GqlDeleteOwnedTeamPayload>('DeleteOwnedTeam', DELETE_OWNED_TEAM, {
+        input: { teamId },
+      })
+      .pipe(
+        map((data) => {
+          const deletedId = data.deleteOwnedTeam?.deletedTeamId;
+          if (!deletedId || deletedId !== teamId) {
+            throw new Error('Réponse suppression invalide.');
+          }
+          return deletedId;
+        }),
+      );
+  }
+
+  ownedTeamExists(teamId: string): Observable<boolean> {
+    return this.gql
+      .execute<GqlTeamById>('GetOwnedTeam', GET_OWNED_TEAM, { id: teamId })
+      .pipe(
+        map((data) => {
+          const team = data.team;
+          return team !== null && team.kind === 'owned' && !team.isDeleted;
         }),
       );
   }

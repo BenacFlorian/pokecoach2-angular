@@ -93,3 +93,9 @@ export interface GqlCreateMatchupPayload {
     matchup: GqlMatchupNode;
   } | null;
 }
+
+export interface GqlDeleteOwnedTeamPayload {
+  deleteOwnedTeam: {
+    deletedTeamId: string;
+  } | null;
+}

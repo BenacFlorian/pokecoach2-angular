@@ -129,6 +129,6 @@
     </form>
   </div>
   <form method="dialog" class="tw:modal-backdrop">
-    <button type="submit" aria-label="Fermer">close</button>
+    <button type="submit" aria-label="Fermer" [disabled]="resolving() || saving()">close</button>
   </form>
 </dialog>

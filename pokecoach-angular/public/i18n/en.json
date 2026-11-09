@@ -146,9 +146,26 @@
   "teamDetail": {
     "notFound": "This team was not found.",
     "backHome": "Back to home",
+    "backTeams": "My teams",
     "prepareMatchup": "Prepare a matchup",
     "matchupsTitle": "Prepared matchups",
+    "matchupsTotal": "{{count}} matchup(s) total",
     "noMatchups": "No opponents prepared yet.",
     "loadMore": "Load more"
+  },
+  "teamDelete": {
+    "title": "Delete team",
+    "trigger": "Delete",
+    "triggerAria": "Delete team {{name}}",
+    "confirm": "Delete permanently",
+    "warning": "Delete “{{name}}”? All related matchups and analyses will be removed, including runs in progress.",
+    "deleting": "Deleting…",
+    "uncertain": "The team may already be deleted. Retry to confirm."
+  },
+  "matchupSearch": {
+    "label": "Search opponent Pokémon",
+    "hint": "Showdown name (substring). Comma-separated terms: opponent must include every species (e.g. sneasler, kingambit).",
+    "clear": "Clear search",
+    "noResults": "No matchups match this search"
   }
 }

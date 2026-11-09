@@ -1,13 +1,13 @@
 <div class="tw:h-full tw:flex tw:flex-col tw:gap-4 tw:pt-4 tw:min-h-0">
   <div class="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2">
-    <h1 class="tw:m-0">{{ 'home.title' | transloco }}</h1>
+    <h1 id="home-teams-title" class="tw:m-0">{{ 'home.title' | transloco }}</h1>
     <div class="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
       @if (showDevLinks) {
         <a routerLink="/developer/demo-data" class="tw:btn tw:btn-ghost tw:btn-sm">Demo seed</a>
       }
       <button
         type="button"
-        class="tw:btn tw:btn-soft tw:btn-primary"
+        class="tw:btn tw:btn-primary"
         #addBtn
         [disabled]="savingTeam"
         (click)="openImport(addBtn)"
@@ -37,17 +37,29 @@
       <p>{{ 'home.empty' | transloco }}</p>
     }
     @for (team of store.teams(); track team.id) {
-      <a
-        [routerLink]="['/teams', team.id]"
-        class="tw:block tw:bg-base-100 tw:border tw:border-base-300 tw:rounded-box tw:p-4 hover:tw:bg-base-300/40 tw:no-underline tw:text-inherit"
+      <div
+        class="tw:flex tw:items-stretch tw:gap-2 tw:bg-base-100 tw:border tw:border-base-300 tw:rounded-box tw:overflow-hidden"
       >
-        <app-team-strip [team]="team" />
-        @if (team.source.url) {
-          <span class="tw:text-sm tw:text-base-content/70">{{ 'home.pokepasteLink' | transloco }}</span>
-        } @else {
-          <span class="tw:text-sm tw:text-base-content/70">{{ 'home.localSource' | transloco }}</span>
-        }
-      </a>
+        <a
+          [routerLink]="['/teams', team.id]"
+          class="tw:flex-1 tw:p-4 hover:tw:bg-base-300/40 tw:no-underline tw:text-inherit tw:min-w-0"
+        >
+          <app-team-strip [team]="team" />
+          @if (team.source.url) {
+            <span class="tw:text-sm tw:text-base-content/70">{{ 'home.pokepasteLink' | transloco }}</span>
+          } @else {
+            <span class="tw:text-sm tw:text-base-content/70">{{ 'home.localSource' | transloco }}</span>
+          }
+        </a>
+        <button
+          type="button"
+          class="tw:btn tw:btn-error tw:btn-soft tw:shrink-0 tw:rounded-none"
+          [attr.aria-label]="'teamDelete.triggerAria' | transloco: { name: team.name }"
+          (click)="openDelete($any($event.currentTarget), team, $event)"
+        >
+          {{ 'teamDelete.trigger' | transloco }}
+        </button>
+      </div>
     }
     @if (store.teamsHasNextPage()) {
       <button
@@ -67,3 +79,5 @@
   (submitted)="onTeamImported($event)"
   (cancelled)="onImportCancelled()"
 />
+
+<app-team-delete-dialog (deleted)="onTeamDeleted($event)" />

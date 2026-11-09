@@ -67,12 +67,12 @@ export const GET_OWNED_TEAM = `
 `;
 
 export const LIST_MATCHUPS = `
-  query ListMatchups($teamId: UUID!, $after: Cursor) {
-    matchups(
+  query ListMatchups($teamId: UUID!, $speciesQuery: String, $after: Cursor) {
+    matchups: searchTeamMatchups(
+      teamId: $teamId
+      speciesQuery: $speciesQuery
       first: 50
       after: $after
-      condition: { ourTeamId: $teamId, isDeleted: false }
-      orderBy: [CREATED_AT_DESC, ID_DESC]
     ) {
       nodes {
         id
@@ -178,6 +178,14 @@ export const UPDATE_MATCHUP_REGULATION = `
         id
         regulation
       }
+    }
+  }
+`;
+
+export const DELETE_OWNED_TEAM = `
+  mutation DeleteOwnedTeam($input: DeleteOwnedTeamInput!) {
+    deleteOwnedTeam(input: $input) {
+      deletedTeamId
     }
   }
 `;

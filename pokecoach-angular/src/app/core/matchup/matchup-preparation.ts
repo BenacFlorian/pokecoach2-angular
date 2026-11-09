@@ -1,16 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { CoachStore } from '../data/coach-store';
 import { userMessageForGraphqlError } from '../graphql/graphql-error';
 import type { MatchupSummary } from '../graphql/coach-mappers';
 import { AnalysisApi } from '../python/analysis-api';
-import type { AnalysisCapabilitiesView, AnalysisStartRequest } from '../python/analysis-api.models';
-import { analysisErrorMessage, AnalysisError } from '../python/analysis-error';
-import { LocaleService } from '../i18n/locale.service';
+import type { AnalysisCapabilitiesView } from '../python/analysis-api.models';
 import {
   clearPendingAnalysisMarker,
-  writePendingAnalysisMarker,
+  readPendingAnalysisMarker,
 } from '../python/pending-analysis-command';
 import type { TeamImportSubmit } from '../../shared/teams/team-import-dialog';
 
@@ -18,76 +15,79 @@ export type MatchupPreparationPhase =
   | 'idle'
   | 'creating'
   | 'reconciling'
-  | 'starting-analysis'
   | 'accepted'
-  | 'creation-error'
-  | 'analysis-error';
+  | 'creation-error';
 
 export interface MatchupPreparationSnapshot {
   phase: MatchupPreparationPhase;
   teamId: string | null;
   matchupId: string | null;
   opponentId: string | null;
-  runId: string | null;
   creationError: string | null;
-  analysisError: string | null;
   statusMessage: string | null;
-  analysisRetryable: boolean;
 }
 
-interface ActiveCommand {
+interface TeamCommandState {
+  phase: MatchupPreparationPhase;
   teamId: string;
-  matchupId: string;
-  opponentId: string;
-  idempotencyKey: string;
-  requestBody: AnalysisStartRequest;
+  matchupId: string | null;
+  opponentId: string | null;
+  pendingIds: { matchupId: string; opponentId: string } | null;
+  creationError: string | null;
+  commandGen: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class MatchupPreparation {
   private readonly store = inject(CoachStore);
   private readonly analysisApi = inject(AnalysisApi);
-  private readonly router = inject(Router);
-  private readonly locale = inject(LocaleService);
 
-  private readonly phase = signal<MatchupPreparationPhase>('idle');
-  private readonly teamId = signal<string | null>(null);
-  private readonly matchupId = signal<string | null>(null);
-  private readonly opponentId = signal<string | null>(null);
-  private readonly runId = signal<string | null>(null);
-  private readonly creationError = signal<string | null>(null);
-  private readonly analysisError = signal<string | null>(null);
-  private readonly analysisRetryable = signal(false);
+  private readonly activeTeamId = signal<string | null>(null);
+  private readonly teamsRevision = signal(0);
+  private readonly teams = new Map<string, TeamCommandState>();
+  private chainSub: Subscription | null = null;
   private readonly capabilitiesState = signal<
     'idle' | 'loading' | 'ready' | 'error'
   >('idle');
   private readonly capabilities = signal<AnalysisCapabilitiesView | null>(null);
   private readonly capabilitiesError = signal<string | null>(null);
-
-  private activeCommand: ActiveCommand | null = null;
-  private pendingIds: { matchupId: string; opponentId: string } | null = null;
-  private chainSub: Subscription | null = null;
   private capabilitiesSub: Subscription | null = null;
-  private navigationTeamId: string | null = null;
 
   readonly snapshot = computed<MatchupPreparationSnapshot>(() => {
-    const phase = this.phase();
+    this.teamsRevision();
+    const teamId = this.activeTeamId();
+    if (!teamId) {
+      return {
+        phase: 'idle',
+        teamId: null,
+        matchupId: null,
+        opponentId: null,
+        creationError: null,
+        statusMessage: null,
+      };
+    }
+    const state = this.teams.get(teamId);
+    if (!state) {
+      return {
+        phase: 'idle',
+        teamId: null,
+        matchupId: null,
+        opponentId: null,
+        creationError: null,
+        statusMessage: null,
+      };
+    }
     let statusMessage: string | null = null;
-    if (phase === 'creating' || phase === 'reconciling') {
+    if (state.phase === 'creating' || state.phase === 'reconciling') {
       statusMessage = 'Enregistrement du matchup…';
-    } else if (phase === 'starting-analysis') {
-      statusMessage = 'Lancement de l’analyse…';
     }
     return {
-      phase,
-      teamId: this.teamId(),
-      matchupId: this.matchupId(),
-      opponentId: this.opponentId(),
-      runId: this.runId(),
-      creationError: this.creationError(),
-      analysisError: this.analysisError(),
+      phase: state.phase,
+      teamId: state.teamId,
+      matchupId: state.matchupId,
+      opponentId: state.opponentId,
+      creationError: state.creationError,
       statusMessage,
-      analysisRetryable: this.analysisRetryable(),
     };
   });
 
@@ -112,9 +112,9 @@ export class MatchupPreparation {
         this.capabilities.set(view);
         this.capabilitiesState.set('ready');
       },
-      error: (err: unknown) => {
+      error: () => {
         this.capabilitiesState.set('error');
-        this.capabilitiesError.set(analysisErrorMessage(err));
+        this.capabilitiesError.set('Impossible de charger les capacités d’analyse.');
       },
     });
   }
@@ -123,134 +123,134 @@ export class MatchupPreparation {
     if (this.chainSub) {
       return;
     }
-    this.resetErrors();
-    this.navigationTeamId = teamId;
-    this.teamId.set(teamId);
-    if (!this.pendingIds) {
-      this.pendingIds = {
+    this.activeTeamId.set(teamId);
+    let state = this.teams.get(teamId);
+    if (!state) {
+      state = {
+        phase: 'idle',
+        teamId,
+        matchupId: null,
+        opponentId: null,
+        pendingIds: null,
+        creationError: null,
+        commandGen: 0,
+      };
+      this.teams.set(teamId, state);
+    }
+    state.commandGen++;
+    state.creationError = null;
+    if (!state.pendingIds) {
+      state.pendingIds = {
         matchupId: crypto.randomUUID(),
         opponentId: crypto.randomUUID(),
       };
     }
-    const ids = this.pendingIds;
-    this.activeCommand = {
-      teamId,
-      matchupId: ids.matchupId,
-      opponentId: ids.opponentId,
-      idempotencyKey: crypto.randomUUID(),
-      requestBody: {
-        targetPhase: 'A',
-        profile: 'standard',
-        locale: this.locale.active(),
-      },
-    };
-    this.matchupId.set(ids.matchupId);
-    this.opponentId.set(ids.opponentId);
-    this.phase.set('creating');
+    const ids = state.pendingIds;
+    state.matchupId = ids.matchupId;
+    state.opponentId = ids.opponentId;
+    state.phase = 'creating';
+    const gen = state.commandGen;
+    this.bumpTeams();
 
     this.chainSub = this.store
       .createOpponentMatchup(ids, teamId, payload.name, payload.imported)
       .subscribe({
-        next: (summary) => this.finishCreatedMatchup(summary),
-        error: (err) => this.handleCreationFailure(teamId, ids, err),
+        next: (summary) => this.finishCreatedMatchup(teamId, gen, summary),
+        error: (err) => this.handleCreationFailure(teamId, gen, ids, err),
       });
   }
 
-  retryAnalysis(matchupId: string): void {
-    const cmd = this.activeCommand;
-    if (!cmd || cmd.matchupId !== matchupId || this.chainSub) {
+  acknowledgeCreated(matchupId: string): void {
+    const teamId = this.activeTeamId();
+    if (!teamId) {
       return;
     }
-    if (this.phase() !== 'analysis-error') {
+    const state = this.teams.get(teamId);
+    if (!state || state.phase !== 'accepted' || state.matchupId !== matchupId) {
       return;
     }
-    this.resetAnalysisError();
-    this.navigationTeamId = cmd.teamId;
-    this.phase.set('starting-analysis');
-    this.launchAnalysis(cmd);
+    state.phase = 'idle';
+    state.matchupId = null;
+    state.opponentId = null;
+    state.pendingIds = null;
+    state.creationError = null;
+    this.bumpTeams();
   }
 
-  resumePendingIfAny(): void {
-    clearPendingAnalysisMarker();
-  }
-
-  dismissAnalysisError(): void {
-    this.resetAnalysisError();
-    this.phase.set('idle');
-    this.activeCommand = null;
-    this.pendingIds = null;
-  }
-
-  private finishCreatedMatchup(summary: MatchupSummary): void {
-    const cmd = this.activeCommand;
-    if (!cmd || summary.id !== cmd.matchupId) {
-      return;
+  leaveTeam(teamId: string): void {
+    const state = this.teams.get(teamId);
+    if (state) {
+      state.commandGen++;
     }
-    this.pendingIds = null;
-    this.chainSub = null;
-    this.store.appendMatchup(summary);
-    this.store.loadMatchups(cmd.teamId);
-    this.phase.set('accepted');
-    if (this.navigationTeamId === cmd.teamId) {
-      void this.router.navigate(['/teams', cmd.teamId, 'matchups', summary.id]);
+    if (this.activeTeamId() === teamId) {
+      this.activeTeamId.set(null);
     }
-    queueMicrotask(() => {
-      this.phase.set('idle');
-      this.activeCommand = null;
-    });
-  }
-
-  private launchAnalysis(cmd: ActiveCommand): void {
-    writePendingAnalysisMarker({
-      schemaVersion: 1,
-      teamId: cmd.teamId,
-      matchupId: cmd.matchupId,
-      idempotencyKey: cmd.idempotencyKey,
-      requestBody: cmd.requestBody,
-    });
-
     this.chainSub?.unsubscribe();
-    this.chainSub = this.analysisApi
-      .start(cmd.matchupId, cmd.requestBody, cmd.idempotencyKey)
-      .subscribe({
-        next: (result) => {
-          clearPendingAnalysisMarker();
-          this.runId.set(result.runId);
-          this.phase.set('accepted');
-          this.chainSub = null;
-          if (this.navigationTeamId === cmd.teamId) {
-            void this.router.navigate(
-              ['/teams', cmd.teamId, 'matchups', cmd.matchupId],
-              { queryParams: { runId: result.runId } },
-            );
-          }
-          this.phase.set('idle');
-          this.activeCommand = null;
-        },
-        error: (err: unknown) => {
-          this.chainSub = null;
-          this.analysisRetryable.set(
-            err instanceof AnalysisError ? err.retryable : true,
-          );
-          this.analysisError.set(analysisErrorMessage(err));
-          this.phase.set('analysis-error');
-        },
-      });
+    this.chainSub = null;
+    this.bumpTeams();
+  }
+
+  forgetTeam(teamId: string): void {
+    this.teams.delete(teamId);
+    if (this.activeTeamId() === teamId) {
+      this.activeTeamId.set(null);
+    }
+    this.chainSub?.unsubscribe();
+    this.chainSub = null;
+    this.bumpTeams();
+    const marker = readPendingAnalysisMarker();
+    if (marker && marker.teamId === teamId) {
+      clearPendingAnalysisMarker();
+    }
+  }
+
+  private bumpTeams(): void {
+    this.teamsRevision.update((n) => n + 1);
+  }
+
+  private finishCreatedMatchup(
+    teamId: string,
+    gen: number,
+    summary: MatchupSummary,
+  ): void {
+    const state = this.teams.get(teamId);
+    if (!state || gen !== state.commandGen) {
+      return;
+    }
+    if (state.pendingIds && summary.id !== state.pendingIds.matchupId) {
+      return;
+    }
+    state.pendingIds = null;
+    state.matchupId = summary.id;
+    state.phase = 'accepted';
+    this.chainSub = null;
+    this.activeTeamId.set(teamId);
+    this.bumpTeams();
   }
 
   private handleCreationFailure(
     teamId: string,
+    gen: number,
     ids: { matchupId: string; opponentId: string },
     err: unknown,
   ): void {
-    this.creationError.set(userMessageForGraphqlError(err));
-    this.phase.set('reconciling');
+    const state = this.teams.get(teamId);
+    if (!state || gen !== state.commandGen) {
+      return;
+    }
+    state.creationError = userMessageForGraphqlError(err);
+    state.phase = 'reconciling';
+    this.bumpTeams();
     this.chainSub?.unsubscribe();
     this.chainSub = this.store.reconcileMatchup(teamId, ids.matchupId).subscribe({
       next: (detail) => {
         this.chainSub = null;
+        const current = this.teams.get(teamId);
+        if (!current || gen !== current.commandGen) {
+          return;
+        }
         if (detail && detail.teamId === teamId) {
-          this.finishCreatedMatchup({
+          this.finishCreatedMatchup(teamId, gen, {
             id: detail.id,
             teamId: detail.teamId,
             opponent: detail.opponentTeam,
@@ -261,23 +261,19 @@ export class MatchupPreparation {
           });
           return;
         }
-        this.phase.set('creation-error');
+        current.phase = 'creation-error';
+        this.bumpTeams();
       },
       error: () => {
         this.chainSub = null;
-        this.phase.set('creation-error');
+        const current = this.teams.get(teamId);
+        if (!current || gen !== current.commandGen) {
+          return;
+        }
+        current.phase = 'creation-error';
+        this.bumpTeams();
       },
     });
-  }
-
-  private resetErrors(): void {
-    this.creationError.set(null);
-    this.resetAnalysisError();
-  }
-
-  private resetAnalysisError(): void {
-    this.analysisError.set(null);
-    this.analysisRetryable.set(false);
   }
 
   /** Test helper */
@@ -286,14 +282,8 @@ export class MatchupPreparation {
     this.capabilitiesSub?.unsubscribe();
     this.chainSub = null;
     this.capabilitiesSub = null;
-    this.phase.set('idle');
-    this.teamId.set(null);
-    this.matchupId.set(null);
-    this.opponentId.set(null);
-    this.runId.set(null);
-    this.activeCommand = null;
-    this.pendingIds = null;
-    this.navigationTeamId = null;
+    this.teams.clear();
+    this.activeTeamId.set(null);
     clearPendingAnalysisMarker();
   }
 }

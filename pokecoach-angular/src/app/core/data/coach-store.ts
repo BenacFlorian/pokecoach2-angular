@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { Subscription } from 'rxjs';
+import { Subscription, timer } from 'rxjs';
 import type { ImportedTeam, Team } from '../models/team.model';
 import { CoachApi } from '../graphql/coach-api';
 import { userMessageForGraphqlError } from '../graphql/graphql-error';
@@ -15,6 +15,7 @@ export interface ListResource<T> {
   endCursor: string | null;
   hasNextPage: boolean;
   loadingMore: boolean;
+  totalCount: number | null;
 }
 
 export interface DetailResource<T> {
@@ -31,7 +32,12 @@ function emptyList<T>(): ListResource<T> {
     endCursor: null,
     hasNextPage: false,
     loadingMore: false,
+    totalCount: null,
   };
+}
+
+function matchupListKey(teamId: string, speciesQuery: string): string {
+  return `${teamId}\0${speciesQuery}`;
 }
 
 function emptyDetail<T>(): DetailResource<T> {
@@ -52,6 +58,8 @@ export class CoachStore {
   private teamDetailKey = '';
   private matchupsRequestGen = 0;
   private matchupsTeamKey = '';
+  private matchupsListKey = '';
+  private matchupsSearchQuery = '';
   private matchupDetailGen = 0;
   private matchupDetailKey = '';
 
@@ -63,6 +71,7 @@ export class CoachStore {
   private teamsSub: Subscription | null = null;
   private teamSub: Subscription | null = null;
   private matchupsSub: Subscription | null = null;
+  private matchupsTimerSub: Subscription | null = null;
   private matchupSub: Subscription | null = null;
   private selectedRunSub: Subscription | null = null;
 
@@ -81,6 +90,7 @@ export class CoachStore {
   readonly matchupsError = computed(() => this.matchupsResource().error);
   readonly matchupsHasNextPage = computed(() => this.matchupsResource().hasNextPage);
   readonly matchupsLoadingMore = computed(() => this.matchupsResource().loadingMore);
+  readonly matchupsTotalCount = computed(() => this.matchupsResource().totalCount);
 
   readonly matchupDetailState = computed(() => this.matchupDetailResource().state);
   readonly matchupDetail = computed(() => this.matchupDetailResource().value);
@@ -125,6 +135,9 @@ export class CoachStore {
 
   loadTeam(teamId: string): void {
     if (!isUuid(teamId)) {
+      ++this.teamDetailGen;
+      ++this.matchupsRequestGen;
+      this.cancelMatchupsFetch();
       this.teamDetailResource.set({ state: 'not-found', value: null, error: null });
       return;
     }
@@ -156,24 +169,79 @@ export class CoachStore {
     });
   }
 
-  loadMatchups(teamId: string): void {
+  loadMatchups(teamId: string, speciesQuery = '', delayMs: 0 | 250 = 0): void {
     if (!isUuid(teamId)) {
+      this.cancelMatchupsFetch();
+      ++this.matchupsRequestGen;
+      this.matchupsTeamKey = '';
+      this.matchupsListKey = '';
+      this.matchupsSearchQuery = '';
       this.matchupsResource.set({ ...emptyList(), state: 'not-found' });
       return;
     }
-    const gen = ++this.matchupsRequestGen;
-    this.matchupsTeamKey = teamId;
-    this.matchupsSub?.unsubscribe();
-    this.matchupsResource.set({ ...emptyList(), state: 'loading' });
-    this.matchupsSub = this.api.listMatchups(teamId).subscribe({
-      next: (page) => this.applyMatchupsPage(gen, teamId, page, false),
-      error: (err) => this.failMatchups(gen, teamId, err),
-    });
+
+    const normalizedQuery = speciesQuery.trim();
+    const listKey = matchupListKey(teamId, normalizedQuery);
+    const contextChanged =
+      listKey !== this.matchupsListKey || this.matchupsTeamKey !== teamId;
+
+    if (
+      !contextChanged &&
+      this.matchupsResource().state === 'loading'
+    ) {
+      return;
+    }
+
+    if (contextChanged) {
+      ++this.matchupsRequestGen;
+      this.cancelMatchupsFetch();
+      this.matchupsTeamKey = teamId;
+      this.matchupsListKey = listKey;
+      this.matchupsSearchQuery = normalizedQuery;
+      this.matchupsResource.set({ ...emptyList(), state: 'loading' });
+    } else {
+      ++this.matchupsRequestGen;
+      this.cancelMatchupsFetch();
+      this.matchupsResource.update((r) => ({
+        ...r,
+        state: 'loading',
+        error: null,
+      }));
+    }
+
+    const gen = this.matchupsRequestGen;
+    const capturedKey = listKey;
+    const capturedTeamId = teamId;
+    const capturedQuery = normalizedQuery;
+
+    const startFetch = (): void => {
+      if (gen !== this.matchupsRequestGen || this.matchupsListKey !== capturedKey) {
+        return;
+      }
+      this.matchupsSub?.unsubscribe();
+      this.matchupsSub = this.api.listMatchups(capturedTeamId, capturedQuery).subscribe({
+        next: (page) => this.applyMatchupsPage(gen, capturedKey, page, false),
+        error: (err) => this.failMatchups(gen, capturedKey, err),
+      });
+    };
+
+    if (delayMs === 250) {
+      this.matchupsTimerSub?.unsubscribe();
+      this.matchupsTimerSub = timer(250).subscribe(() => {
+        this.matchupsTimerSub = null;
+        startFetch();
+      });
+    } else {
+      startFetch();
+    }
   }
 
-  loadMoreMatchups(teamId: string): void {
+  loadMoreMatchups(teamId: string, speciesQuery = ''): void {
+    const normalizedQuery = speciesQuery.trim();
+    const listKey = matchupListKey(teamId, normalizedQuery);
     const current = this.matchupsResource();
     if (
+      this.matchupsListKey !== listKey ||
       this.matchupsTeamKey !== teamId ||
       !current.hasNextPage ||
       current.loadingMore ||
@@ -182,14 +250,15 @@ export class CoachStore {
       return;
     }
     const gen = this.matchupsRequestGen;
+    const cursor = current.endCursor ?? undefined;
     this.matchupsResource.update((r) => ({ ...r, loadingMore: true, error: null }));
     this.matchupsSub?.unsubscribe();
     this.matchupsSub = this.api
-      .listMatchups(teamId, current.endCursor ?? undefined)
+      .listMatchups(teamId, normalizedQuery, cursor)
       .subscribe({
-        next: (page) => this.applyMatchupsPage(gen, teamId, page, true),
+        next: (page) => this.applyMatchupsPage(gen, listKey, page, true),
         error: (err) => {
-          if (gen !== this.matchupsRequestGen || this.matchupsTeamKey !== teamId) {
+          if (gen !== this.matchupsRequestGen || this.matchupsListKey !== listKey) {
             return;
           }
           this.matchupsResource.update((r) => ({
@@ -199,6 +268,25 @@ export class CoachStore {
           }));
         },
       });
+  }
+
+  clearMatchupListContext(teamId: string): void {
+    if (this.matchupsTeamKey !== teamId) {
+      return;
+    }
+    this.cancelMatchupsFetch();
+    ++this.matchupsRequestGen;
+    this.matchupsTeamKey = '';
+    this.matchupsListKey = '';
+    this.matchupsSearchQuery = '';
+    this.matchupsResource.set(emptyList());
+  }
+
+  private cancelMatchupsFetch(): void {
+    this.matchupsSub?.unsubscribe();
+    this.matchupsSub = null;
+    this.matchupsTimerSub?.unsubscribe();
+    this.matchupsTimerSub = null;
   }
 
   loadMatchup(
@@ -228,6 +316,7 @@ export class CoachStore {
         }
         if (!detail) {
           this.matchupDetailResource.set({ state: 'not-found', value: null, error: null });
+          this.clearSelectedRun();
           return;
         }
         this.matchupDetailResource.set({ state: 'ready', value: detail, error: null });
@@ -300,6 +389,13 @@ export class CoachStore {
         }
         if (revision !== undefined) {
           this.selectedRunRevision = revision;
+        }
+        if (view.kind === 'absent') {
+          this.selectedRunResource.set({ state: 'not-found', value: null, error: null });
+          if (this.matchupDetailKey === `${teamId}:${matchupId}`) {
+            this.loadMatchup(teamId, matchupId, { silent: true });
+          }
+          return;
         }
         this.selectedRunResource.set({ state: 'ready', value: view, error: null });
       },
@@ -375,6 +471,7 @@ export class CoachStore {
       endCursor: page.endCursor,
       hasNextPage: page.hasNextPage,
       loadingMore: false,
+      totalCount: null,
     }));
   }
 
@@ -391,11 +488,11 @@ export class CoachStore {
 
   private applyMatchupsPage(
     gen: number,
-    teamId: string,
+    listKey: string,
     page: Page<MatchupSummary>,
     append: boolean,
   ): void {
-    if (gen !== this.matchupsRequestGen || this.matchupsTeamKey !== teamId) {
+    if (gen !== this.matchupsRequestGen || this.matchupsListKey !== listKey) {
       return;
     }
     this.matchupsResource.update((r) => ({
@@ -405,11 +502,21 @@ export class CoachStore {
       endCursor: page.endCursor,
       hasNextPage: page.hasNextPage,
       loadingMore: false,
+      totalCount: page.totalCount ?? r.totalCount,
     }));
   }
 
-  private failMatchups(gen: number, teamId: string, err: unknown): void {
-    if (gen !== this.matchupsRequestGen || this.matchupsTeamKey !== teamId) {
+  private failMatchups(gen: number, listKey: string, err: unknown): void {
+    if (gen !== this.matchupsRequestGen || this.matchupsListKey !== listKey) {
+      return;
+    }
+    const hadItems = this.matchupsResource().items.length > 0;
+    if (hadItems) {
+      this.matchupsResource.update((r) => ({
+        ...r,
+        loadingMore: false,
+        error: userMessageForGraphqlError(err),
+      }));
       return;
     }
     this.matchupsResource.set({
@@ -419,7 +526,6 @@ export class CoachStore {
     });
   }
 
-  /** Test helper */
   invalidateAll(): void {
     this.teamsRequestGen++;
     this.teamDetailGen++;
@@ -428,9 +534,14 @@ export class CoachStore {
     this.selectedRunGen++;
     this.teamsSub?.unsubscribe();
     this.teamSub?.unsubscribe();
-    this.matchupsSub?.unsubscribe();
+    this.cancelMatchupsFetch();
     this.matchupSub?.unsubscribe();
     this.selectedRunSub?.unsubscribe();
+    this.matchupsTeamKey = '';
+    this.matchupsListKey = '';
+    this.matchupsSearchQuery = '';
+    this.teamDetailKey = '';
+    this.matchupDetailKey = '';
     this.teamsResource.set(emptyList());
     this.teamDetailResource.set(emptyDetail());
     this.matchupsResource.set(emptyList());

@@ -170,10 +170,38 @@ export async function installGraphqlMock(
       return;
     }
 
+    if (op === 'DeleteOwnedTeam') {
+      const input = body.variables?.['input'] as { teamId: string };
+      const teamId = input.teamId;
+      state.teams = state.teams.filter((t) => t.id !== teamId || t.kind !== 'owned');
+      state.matchups = state.matchups.filter((m) => m.ourTeamId !== teamId);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          data: { deleteOwnedTeam: { deletedTeamId: teamId } },
+        }),
+      });
+      return;
+    }
+
     if (op === 'ListMatchups') {
       const teamId = body.variables?.['teamId'] as string;
+      const speciesQuery = ((body.variables?.['speciesQuery'] as string) ?? '').trim();
+      const terms = speciesQuery
+        .split(',')
+        .map((t) => t.trim().toLowerCase())
+        .filter((t) => t.length > 0);
       const nodes = state.matchups
         .filter((m) => m.ourTeamId === teamId)
+        .filter((m) => {
+          if (terms.length === 0) {
+            return true;
+          }
+          return terms.every((term) =>
+            m.opponentTeam.pokemon.some((p) => p.species.toLowerCase().includes(term)),
+          );
+        })
         .map((m) => ({
           id: m.id,
           ourTeamId: m.ourTeamId,

@@ -50,10 +50,11 @@ test.describe('ajout matchup sans analyse automatique', () => {
     await page.locator('textarea').fill(SAMPLE_PASTE);
     await page.getByRole('button', { name: 'Valider' }).click();
 
-    await expect(page).toHaveURL(/\/matchups\//, { timeout: 15_000 });
     await expect(
       page.getByText('Matchup enregistré — aucune analyse disponible'),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
+    await page.getByRole('link', { name: /Adv analysé/ }).click();
+    await expect(page).toHaveURL(/\/matchups\//);
     expect(pythonCalls).toBe(0);
   });
 });

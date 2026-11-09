@@ -146,9 +146,26 @@
   "teamDetail": {
     "notFound": "Cette équipe est introuvable.",
     "backHome": "Retour à l’accueil",
+    "backTeams": "Mes équipes",
     "prepareMatchup": "Préparer un match up",
     "matchupsTitle": "Matchups préparés",
+    "matchupsTotal": "{{count}} matchup(s) au total",
     "noMatchups": "Aucun adversaire préparé pour le moment.",
     "loadMore": "Charger la suite"
+  },
+  "teamDelete": {
+    "title": "Supprimer l’équipe",
+    "trigger": "Supprimer",
+    "triggerAria": "Supprimer l’équipe {{name}}",
+    "confirm": "Supprimer définitivement",
+    "warning": "Supprimer « {{name}} » ? Tous les matchups et analyses associés seront effacés, y compris ceux en cours.",
+    "deleting": "Suppression en cours…",
+    "uncertain": "La suppression a peut‑être réussi. Réessayez pour confirmer."
+  },
+  "matchupSearch": {
+    "label": "Rechercher un Pokémon adverse",
+    "hint": "Nom Showdown (sous-chaîne). Plusieurs espèces séparées par des virgules : toutes doivent être dans l’équipe adverse (ex. sneasler, kingambit).",
+    "clear": "Effacer la recherche",
+    "noResults": "Aucun matchup ne correspond à cette recherche"
   }
 }

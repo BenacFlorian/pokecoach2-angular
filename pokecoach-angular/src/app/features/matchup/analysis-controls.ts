@@ -111,6 +111,13 @@ export class AnalysisControls {
       },
       error: (err: unknown) => {
         this.busy.set(false);
+        if (err instanceof AnalysisError && err.status === 404) {
+          this.startKey = null;
+          this.store.refreshMatchup(this.teamId(), this.matchupId());
+          this.error.set(err.message);
+          this.commandError.emit(err.message);
+          return;
+        }
         const msg =
           err instanceof AnalysisError
             ? err.message
@@ -134,6 +141,9 @@ export class AnalysisControls {
       },
       error: (err: unknown) => {
         this.busy.set(false);
+        if (err instanceof AnalysisError && err.status === 404) {
+          this.store.refreshMatchup(this.teamId(), this.matchupId());
+        }
         const msg =
           err instanceof AnalysisError
             ? err.message

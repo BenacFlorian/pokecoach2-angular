@@ -57,6 +57,18 @@ describe('GraphqlClient', () => {
     expect((err as GraphqlClientError).kind).toBe('graphql');
   });
 
+  it('parses GraphQL validation errors on HTTP 400', () => {
+    let err: unknown;
+    client.execute('ListMatchups', 'query').subscribe({ error: (e) => (err = e) });
+    httpMock.expectOne('/graphql').flush(
+      { errors: [{ message: 'Unknown argument "orderBy"' }] },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    expect(err).toBeInstanceOf(GraphqlClientError);
+    expect((err as GraphqlClientError).kind).toBe('graphql');
+    expect((err as GraphqlClientError).message).toContain('orderBy');
+  });
+
   it('rejects HTML responses', () => {
     let err: unknown;
     client.execute('Bad', '{ bad }').subscribe({ error: (e) => (err = e) });

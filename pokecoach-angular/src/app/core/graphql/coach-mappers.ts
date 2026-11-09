@@ -100,6 +100,7 @@ export interface Page<T> {
   items: T[];
   endCursor: string | null;
   hasNextPage: boolean;
+  totalCount?: number;
 }
 
 export function isUuid(value: string): boolean {

@@ -1,0 +1,68 @@
+<dialog
+  #dialog
+  class="tw:modal"
+  [attr.aria-labelledby]="'team-delete-title'"
+  [attr.aria-describedby]="'team-delete-desc'"
+  (cancel)="onDialogCancel($event)"
+>
+  <div class="tw:modal-box tw:border tw:border-base-300">
+  @if (target(); as team) {
+    <h2 id="team-delete-title" class="tw:m-0">
+      {{ 'teamDelete.title' | transloco }}
+    </h2>
+    <p id="team-delete-desc" class="tw:mt-2 tw:m-0">
+      {{ 'teamDelete.warning' | transloco: { name: team.name } }}
+    </p>
+
+    @if (errorMessage(); as err) {
+      <div class="tw:alert tw:alert-error tw:mt-4 tw:text-sm" role="alert">
+        <p class="tw:m-0">{{ err }}</p>
+        @if (uncertain()) {
+          <p class="tw:m-0 tw:mt-1">{{ 'teamDelete.uncertain' | transloco }}</p>
+        }
+      </div>
+    }
+
+    @if (deleting()) {
+      <p class="tw:flex tw:items-center tw:gap-2 tw:mt-4" role="status">
+        <span class="tw:loading tw:loading-spinner tw:loading-sm"></span>
+        <span>{{ 'teamDelete.deleting' | transloco }}</span>
+      </p>
+    }
+
+    <div class="tw:modal-action">
+      <button
+        id="team-delete-cancel"
+        type="button"
+        class="tw:btn tw:btn-ghost"
+        [disabled]="deleting()"
+        (click)="onDialogCancel($event)"
+      >
+        {{ 'common.cancel' | transloco }}
+      </button>
+      @if (errorMessage()) {
+        <button
+          type="button"
+          class="tw:btn tw:btn-error"
+          [disabled]="deleting()"
+          (click)="retry()"
+        >
+          {{ 'common.retry' | transloco }}
+        </button>
+      } @else {
+        <button
+          type="button"
+          class="tw:btn tw:btn-error"
+          [disabled]="deleting()"
+          (click)="confirmDelete()"
+        >
+          {{ 'teamDelete.confirm' | transloco }}
+        </button>
+      }
+    </div>
+  }
+  </div>
+  <form method="dialog" class="tw:modal-backdrop">
+    <button type="submit" [attr.aria-label]="'common.close' | transloco">close</button>
+  </form>
+</dialog>

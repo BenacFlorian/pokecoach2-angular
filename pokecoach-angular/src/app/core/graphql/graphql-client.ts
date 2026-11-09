@@ -90,9 +90,37 @@ export class GraphqlClient {
           'Le proxy renvoie une page HTML au lieu de GraphQL.',
         );
       }
+      let payload: unknown = err.error;
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload) as unknown;
+        } catch {
+          payload = null;
+        }
+      }
+      if (
+        typeof payload === 'object' &&
+        payload !== null &&
+        'errors' in payload &&
+        Array.isArray((payload as GraphqlEnvelope<unknown>).errors) &&
+        (payload as GraphqlEnvelope<unknown>).errors!.length
+      ) {
+        const messages = (payload as GraphqlEnvelope<unknown>).errors!.map((e) => e.message);
+        return new GraphqlClientError(
+          'graphql',
+          messages[0] ?? 'La requête GraphQL a échoué.',
+          messages,
+        );
+      }
+      if (err.status === 0) {
+        return new GraphqlClientError(
+          'network',
+          'Impossible de joindre l’API. Vérifiez que PostGraphile est démarré.',
+        );
+      }
       return new GraphqlClientError(
-        'network',
-        'Impossible de joindre l’API. Vérifiez que PostGraphile est démarré.',
+        'graphql',
+        `Le serveur a répondu avec une erreur (${err.status}).`,
       );
     }
     return new GraphqlClientError(
